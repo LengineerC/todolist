@@ -9,15 +9,17 @@ class Widget;
 }
 QT_END_NAMESPACE
 
-class Widget : public QWidget
-{
+class Widget : public QWidget {
     Q_OBJECT
 
-public:
+  public:
     Widget(QWidget *parent = nullptr);
     ~Widget();
 
-private:
+  protected:
+    void paintEvent(QPaintEvent *event);
+
+  private:
     Ui::Widget *ui;
 };
 #endif // WIDGET_H
