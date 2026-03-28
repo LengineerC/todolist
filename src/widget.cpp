@@ -1,12 +1,13 @@
 #include "widget.h"
 #include "./ui_widget.h"
+#include "constants.h"
 #include <QPainter>
 
 Widget::Widget(QWidget *parent) : QWidget(parent), ui(new Ui::Widget) {
     setWindowFlags(Qt::FramelessWindowHint | Qt::Window |
                    Qt::CustomizeWindowHint);
     setWindowFlag(Qt::WindowMaximizeButtonHint, false);
-    setFixedSize(600, 800);
+    setFixedSize(Config::width, Config::height);
     setAttribute(Qt::WA_TranslucentBackground);
 
     ui->setupUi(this);
@@ -15,9 +16,9 @@ Widget::Widget(QWidget *parent) : QWidget(parent), ui(new Ui::Widget) {
 void Widget::paintEvent(QPaintEvent *event) {
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
-    painter.setBrush(QColor(45, 45, 45, 150));
+    painter.setBrush(Config::Themes::light.backgroundColor);
     painter.setPen(Qt::NoPen);
-    painter.drawRoundedRect(rect(), 10, 10);
+    painter.drawRoundedRect(rect(), Config::borderRadius, Config::borderRadius);
 }
 
 Widget::~Widget() { delete ui; }
