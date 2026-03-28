@@ -1,8 +1,8 @@
 #pragma once
 
 namespace Config {
-const int width = 500;
-const int height = 600;
+inline const int width = 500;
+inline const int height = 600;
 
 struct Theme {
     QColor textColor;
@@ -19,8 +19,8 @@ struct Themes {
                                    QColor(45, 45, 45, 150)};
 };
 
-const QString configPath =
+inline const QString configPath =
     QCoreApplication::applicationDirPath() + "/config.json";
-const int borderRadius = 10;
+inline const int borderRadius = 10;
 
 } // namespace Config
