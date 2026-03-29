@@ -1,4 +1,6 @@
 #pragma once
+#include <qcolor.h>
+#include <qcoreapplication.h>
 
 namespace Config {
 inline const int width = 500;
