@@ -29,6 +29,8 @@ class ConfigManager : public QObject {
 
     void writeConfigJson(QJsonObject configJson);
 
+    QJsonObject getConfig();
+
     ConfigManager(const ConfigManager &) = delete;
 
     ConfigManager operator=(const ConfigManager &) = delete;

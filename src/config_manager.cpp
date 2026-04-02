@@ -1,11 +1,11 @@
 #include "config_manager.h";
 
 ConfigManager::ConfigManager(QObject *parent) {
-    if (!m_configWatcher.addPath(Config::configPath)) {
+    if (!m_configWatcher.addPath(Config::getConfigPath())) {
         qWarning() << "Failed to add filepath to watcher: "
-                   << Config::configPath;
+                   << Config::getConfigPath();
     }
-
+    qDebug() << "config path: " << Config::getConfigPath();
     m_configJson = getDefaultConfig();
 
     connect(&m_configWatcher, &QFileSystemWatcher::fileChanged, this,
@@ -31,15 +31,19 @@ ConfigManager &ConfigManager::instance() {
     return s_instance;
 }
 
+QJsonObject ConfigManager::getConfig() { return m_configJson; }
+
 bool ConfigManager::readConfigJson() {
-    QFile file(Config::configPath);
+    QFile file(Config::getConfigPath());
 
     if (!file.exists()) {
         qDebug() << "config.json not exists, create default options";
-        // TODO:
-        // create default config
 
-        return true;
+        m_configJson = getDefaultConfig();
+        writeConfigJson(m_configJson);
+        m_configWatcher.addPath(Config::getConfigPath());
+
+        return QFile::exists(Config::getConfigPath());
     }
 
     if (!file.open(QIODevice::ReadOnly)) {
@@ -67,7 +71,7 @@ bool ConfigManager::readConfigJson() {
 }
 
 void ConfigManager::writeConfigJson(QJsonObject configJson) {
-    QFile file(Config::configPath);
+    QFile file(Config::getConfigPath());
 
     if (file.open(QIODevice::WriteOnly)) {
         QJsonDocument document(configJson);

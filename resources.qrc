@@ -1,0 +1,6 @@
+<RCC>
+    <qresource prefix="/fonts">
+        <file alias="main_font">assets/fonts/SourceHanSansSC-Medium.otf</file>
+    </qresource>
+    <qresource prefix="/images"/>
+</RCC>

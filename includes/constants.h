@@ -19,10 +19,15 @@ struct Themes {
                                     QColor(255, 255, 255, 150)};
     static inline const Theme dark{QColor(255, 255, 255),
                                    QColor(45, 45, 45, 150)};
+
+    static inline Theme getTheme(QString theme) {
+        return (theme == "dark") ? Themes::dark : Themes::light;
+    }
 };
 
-inline const QString configPath =
-    QCoreApplication::applicationDirPath() + "/config.json";
+inline QString getConfigPath() {
+    return QCoreApplication::applicationDirPath() + "/config.json";
+}
 inline const int borderRadius = 10;
 
 } // namespace Config
