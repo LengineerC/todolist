@@ -23,6 +23,10 @@ struct Themes {
     static inline Theme getTheme(QString theme) {
         return (theme == "dark") ? Themes::dark : Themes::light;
     }
+
+    static inline Theme getReverseTheme(QString theme) {
+        return (theme == "light") ? Themes::dark : Themes::light;
+    }
 };
 
 inline QString getConfigPath() {

@@ -90,7 +90,7 @@ void Widget::registerPage(const QString &routeKey, const QString &title,
                                   " background: transparent;"
                                   " min-width: 77px;"
                                   " border: none;"
-                                  " border: 1px solid #000;"
+                                //   " border: 1px solid #000;"
                                   " padding: 2px 0px;"
                                   " text-align: center;"
                                   " color: %1;"
