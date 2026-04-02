@@ -8,6 +8,7 @@
 #include <QWidget>
 
 class QLabel;
+class QLineEdit;
 class QVBoxLayout;
 class TodoItemWidget;
 
@@ -21,7 +22,6 @@ class TodoPage : public QWidget {
     bool eventFilter(QObject *watched, QEvent *event) override;
 
   private slots:
-    void onItemDoubleClicked(TodoItemWidget *item);
     void onItemLongPressStarted(TodoItemWidget *item, const QPoint &globalPos);
     void onItemDragMoved(TodoItemWidget *item, const QPoint &globalPos);
     void onItemDragReleased(TodoItemWidget *item, const QPoint &globalPos);
@@ -29,6 +29,9 @@ class TodoPage : public QWidget {
   private:
     void addTodoItem(const QString &text);
     void removeTodoItem(TodoItemWidget *item);
+    void beginAddInline();
+    void finishAddInline(bool confirm);
+    bool anyInlineEditing() const;
     void beginDrag(TodoItemWidget *item, const QPoint &globalPos);
     void updateDrag(const QPoint &globalPos);
     void endDrag(const QPoint &globalPos);
@@ -44,6 +47,10 @@ class TodoPage : public QWidget {
     QWidget *m_scrollContent;
     QVBoxLayout *m_listLayout;
     QPushButton *m_addArea;
+    QWidget *m_addEditorRow;
+    QLineEdit *m_addLineEdit;
+    QPushButton *m_addCancelButton;
+    bool m_addInlineActive;
     TodoItemWidget *m_placeholderItem;
     QLabel *m_dragProxy;
     QVector<TodoItemWidget *> m_items;

@@ -8,8 +8,10 @@
 #include <QApplication>
 #include <QEvent>
 #include <QFontMetrics>
+#include <QHBoxLayout>
 #include <QKeyEvent>
 #include <QLabel>
+#include <QLineEdit>
 #include <QMouseEvent>
 #include <QPropertyAnimation>
 #include <QScrollBar>
@@ -27,9 +29,11 @@ constexpr int kAutoScrollIntervalMs = 16;
 
 TodoPage::TodoPage(QWidget *parent)
     : QWidget(parent), m_scrollArea(nullptr), m_scrollContent(nullptr),
-      m_listLayout(nullptr), m_addArea(nullptr), m_placeholderItem(nullptr),
-      m_dragProxy(nullptr), m_dragActive(false), m_dragItem(nullptr),
-      m_dragFromIndex(-1), m_placeholderIndex(-1) {
+      m_listLayout(nullptr), m_addArea(nullptr), m_addEditorRow(nullptr),
+      m_addLineEdit(nullptr), m_addCancelButton(nullptr),
+      m_addInlineActive(false), m_placeholderItem(nullptr), m_dragProxy(nullptr),
+      m_dragActive(false), m_dragItem(nullptr), m_dragFromIndex(-1),
+      m_placeholderIndex(-1) {
     auto *rootLayout = new QVBoxLayout(this);
     rootLayout->setContentsMargins(0, 0, 0, 0);
     rootLayout->setSpacing(0);
@@ -100,7 +104,77 @@ TodoPage::TodoPage(QWidget *parent)
                                  .arg(borderColor));
 
     connect(m_addArea, &QPushButton::clicked, this,
-            [this]() { addTodoItem("New todo item"); });
+            [this]() { beginAddInline(); });
+
+    m_addEditorRow = new QWidget(m_scrollContent);
+    m_addEditorRow->setFixedHeight(kItemMinHeight);
+    m_addEditorRow->hide();
+
+    auto *addEditorLayout = new QHBoxLayout(m_addEditorRow);
+    addEditorLayout->setContentsMargins(12, 10, 12, 10);
+    addEditorLayout->setSpacing(8);
+
+    m_addLineEdit = new QLineEdit(m_addEditorRow);
+    m_addLineEdit->setPlaceholderText("New todo item");
+    m_addLineEdit->installEventFilter(this);
+
+    const QString inputTextColor = Utils::colorToRgba(
+        Config::Themes::getTheme(
+            ConfigManager::instance().getConfig()["theme"].toString())
+            .textColor,
+        255);
+    const QString inputBgColor = Utils::colorToRgba(
+        Config::Themes::getTheme(
+            ConfigManager::instance().getConfig()["theme"].toString())
+            .backgroundColor,
+        40);
+    const QString inputBorderColor = Utils::colorToRgba(
+        Config::Themes::getReverseTheme(
+            ConfigManager::instance().getConfig()["theme"].toString())
+            .backgroundColor,
+        100);
+
+    m_addLineEdit->setStyleSheet(QString("QLineEdit {"
+                                         " color: %1;"
+                                         " background: %2;"
+                                         " border: 1px solid %3;"
+                                         " border-radius: 6px;"
+                                         " padding: 6px 10px;"
+                                         "}")
+                                     .arg(inputTextColor, inputBgColor,
+                                          inputBorderColor));
+
+    m_addCancelButton = new QPushButton("x", m_addEditorRow);
+    m_addCancelButton->setCursor(Qt::PointingHandCursor);
+    m_addCancelButton->setFocusPolicy(Qt::NoFocus);
+    m_addCancelButton->setFixedSize(22, 22);
+    m_addCancelButton->setStyleSheet(
+        QString("QPushButton {"
+                " color: %1;"
+                " background: transparent;"
+                " border: 1px solid %2;"
+                " border-radius: 11px;"
+                "}"
+                "QPushButton:hover {"
+                " background: %3;"
+                "}")
+            .arg(inputTextColor, inputBorderColor,
+                 Utils::colorToRgba(
+                     Config::Themes::getTheme(
+                         ConfigManager::instance().getConfig()["theme"]
+                             .toString())
+                         .backgroundColor,
+                     70)));
+
+    addEditorLayout->addWidget(m_addLineEdit, 1);
+    addEditorLayout->addWidget(m_addCancelButton, 0, Qt::AlignTop);
+
+    connect(m_addLineEdit, &QLineEdit::returnPressed, this,
+            [this]() { finishAddInline(true); });
+    connect(m_addLineEdit, &QLineEdit::editingFinished, this,
+            [this]() { finishAddInline(true); });
+    connect(m_addCancelButton, &QPushButton::clicked, this,
+            [this]() { finishAddInline(false); });
 
     qApp->installEventFilter(this);
 
@@ -141,12 +215,11 @@ TodoPage::TodoPage(QWidget *parent)
     addTodoItem("Todo item placeholder 05");
 }
 
-void TodoPage::onItemDoubleClicked(TodoItemWidget *item) {
-    removeTodoItem(item);
-}
-
 void TodoPage::onItemLongPressStarted(TodoItemWidget *item,
                                       const QPoint &globalPos) {
+    if (m_addInlineActive || anyInlineEditing()) {
+        return;
+    }
     beginDrag(item, globalPos);
 }
 
@@ -171,7 +244,12 @@ void TodoPage::addTodoItem(const QString &text) {
     auto *item = new TodoItemWidget(text, m_scrollContent);
 
     connect(item, &TodoItemWidget::doubleClicked, this,
-            &TodoPage::onItemDoubleClicked);
+            [this](TodoItemWidget *clickedItem) {
+                if (clickedItem == nullptr || m_dragActive) {
+                    return;
+                }
+                removeTodoItem(clickedItem);
+            });
     connect(item, &TodoItemWidget::longPressStarted, this,
             &TodoPage::onItemLongPressStarted);
     connect(item, &TodoItemWidget::dragMoved, this, &TodoPage::onItemDragMoved);
@@ -195,6 +273,43 @@ void TodoPage::removeTodoItem(TodoItemWidget *item) {
 
     onTodoCompleted(finishedText);
     rebuildListLayout(false);
+}
+
+void TodoPage::beginAddInline() {
+    if (m_addInlineActive || m_dragActive || anyInlineEditing()) {
+        return;
+    }
+
+    m_addInlineActive = true;
+    m_addArea->hide();
+    m_addEditorRow->show();
+    m_addLineEdit->clear();
+    m_addLineEdit->setFocus();
+}
+
+void TodoPage::finishAddInline(bool confirm) {
+    if (!m_addInlineActive) {
+        return;
+    }
+
+    const QString text = m_addLineEdit->text().trimmed();
+    if (confirm && !text.isEmpty()) {
+        addTodoItem(text);
+    }
+
+    m_addLineEdit->clear();
+    m_addEditorRow->hide();
+    m_addArea->show();
+    m_addInlineActive = false;
+}
+
+bool TodoPage::anyInlineEditing() const {
+    for (auto *item : m_items) {
+        if (item != nullptr && item->isEditing()) {
+            return true;
+        }
+    }
+    return false;
 }
 
 void TodoPage::beginDrag(TodoItemWidget *item, const QPoint &globalPos) {
@@ -322,6 +437,14 @@ void TodoPage::finishDrag(bool commit, const QPoint &globalPos) {
 void TodoPage::cancelDrag() { finishDrag(false, m_lastDragGlobalPos); }
 
 bool TodoPage::eventFilter(QObject *watched, QEvent *event) {
+    if (watched == m_addLineEdit && event->type() == QEvent::KeyPress) {
+        auto *keyEvent = static_cast<QKeyEvent *>(event);
+        if (keyEvent->key() == Qt::Key_Escape) {
+            finishAddInline(false);
+            return true;
+        }
+    }
+
     if (!m_dragActive) {
         return QWidget::eventFilter(watched, event);
     }
@@ -399,6 +522,7 @@ void TodoPage::rebuildListLayout(bool withAnimation) {
         m_listLayout->addWidget(m_placeholderItem);
     }
 
+    m_listLayout->addWidget(m_addEditorRow);
     m_listLayout->addWidget(m_addArea);
     m_listLayout->addStretch();
 
