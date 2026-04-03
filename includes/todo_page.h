@@ -41,6 +41,7 @@ class TodoPage : public QWidget {
     int calcInsertIndex(int contentY) const;
     void rebuildListLayout(bool withAnimation);
     void onTodoCompleted(qint64 id);
+    void persistCurrentOrder();
     void updateDragProxyPosition(const QPoint &globalPos);
     void animateGapHeight(int from, int to);
 

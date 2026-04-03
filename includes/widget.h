@@ -6,7 +6,10 @@
 #include <QByteArray>
 #include <QHBoxLayout>
 #include <QMap>
+#include <QResizeEvent>
+#include <QSize>
 #include <QString>
+#include <QTimer>
 #include <QWidget>
 
 QT_BEGIN_NAMESPACE
@@ -32,12 +35,14 @@ class Widget : public QWidget {
     void changeEvent(QEvent *event) override;
     bool nativeEvent(const QByteArray &eventType, void *message,
                      long *result) override;
+    void resizeEvent(QResizeEvent *event) override;
 
   private slots:
     void onNavButtonClicked(QAbstractButton *button);
 
   private:
     void setupRouter();
+    void persistWindowSize();
 
     Ui::Widget *ui;
     QButtonGroup *m_navGroup;
@@ -45,5 +50,7 @@ class Widget : public QWidget {
     QMap<QAbstractButton *, QString> m_buttonToRoute;
     QHBoxLayout *m_navLeftLayout;
     bool m_hasRouteButton;
+    QTimer m_resizeSaveTimer;
+    QSize m_lastSavedSize;
 };
 #endif // WIDGET_H

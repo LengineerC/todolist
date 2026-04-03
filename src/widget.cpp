@@ -9,9 +9,11 @@
 #include <QEvent>
 #include <QFrame>
 #include <QHBoxLayout>
+#include <QJsonObject>
 #include <QLabel>
 #include <QPainter>
 #include <QPushButton>
+#include <QResizeEvent>
 
 #ifdef Q_OS_WIN
 #include <windows.h>
@@ -20,15 +22,28 @@
 
 Widget::Widget(QWidget *parent)
     : QWidget(parent), ui(new Ui::Widget), m_navGroup(nullptr),
-      m_navLeftLayout(nullptr), m_hasRouteButton(false) {
+      m_navLeftLayout(nullptr), m_hasRouteButton(false), m_lastSavedSize(0, 0) {
     setWindowFlags(Qt::FramelessWindowHint | Qt::Window |
                    Qt::CustomizeWindowHint);
     setWindowFlag(Qt::WindowMaximizeButtonHint, false);
-    resize(Config::width, Config::height);
     setMinimumSize(Config::width, Config::height);
+
+    m_resizeSaveTimer.setInterval(350);
+    m_resizeSaveTimer.setSingleShot(true);
+    connect(&m_resizeSaveTimer, &QTimer::timeout, this,
+            &Widget::persistWindowSize);
     setAttribute(Qt::WA_TranslucentBackground);
 
     ui->setupUi(this);
+
+    const QJsonObject config = ConfigManager::instance().getConfig();
+    const int restoredWidth = qMax(Config::width,
+                                   config["windowWidth"].toInt(Config::width));
+    const int restoredHeight = qMax(
+        Config::height, config["windowHeight"].toInt(Config::height));
+    resize(restoredWidth, restoredHeight);
+    m_lastSavedSize = size();
+
     setupRouter();
 
     registerPage("todo", "Todo", new TodoPage(this));
@@ -225,6 +240,33 @@ bool Widget::nativeEvent(const QByteArray &eventType, void *message,
 #endif
 
     return QWidget::nativeEvent(eventType, message, result);
+}
+
+void Widget::resizeEvent(QResizeEvent *event) {
+    QWidget::resizeEvent(event);
+
+    if (isMaximized() || isFullScreen()) {
+        return;
+    }
+
+    m_resizeSaveTimer.start();
+}
+
+void Widget::persistWindowSize() {
+    if (isMaximized() || isFullScreen()) {
+        return;
+    }
+
+    if (size() == m_lastSavedSize) {
+        return;
+    }
+
+    QJsonObject config = ConfigManager::instance().getConfig();
+    config["windowWidth"] = size().width();
+    config["windowHeight"] = size().height();
+    ConfigManager::instance().writeConfigJson(config);
+
+    m_lastSavedSize = size();
 }
 
 void Widget::onNavButtonClicked(QAbstractButton *button) {

@@ -11,6 +11,7 @@ struct TodoRecord {
     QString time;
     QString content;
     bool completed;
+    int sortOrder;
 };
 
 class DbManager : public QObject {
@@ -33,6 +34,7 @@ class DbManager : public QObject {
     QVector<TodoRecord> loadActiveTodos();
     qint64 insertTodo(const QString &content);
     bool markCompleted(qint64 id);
+    bool updateTodoOrder(const QVector<qint64> &orderedIds);
 
     DbManager(const DbManager &) = delete;
     DbManager operator=(const DbManager &) = delete;

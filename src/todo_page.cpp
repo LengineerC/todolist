@@ -454,6 +454,7 @@ void TodoPage::finishDrag(bool commit, const QPoint &globalPos) {
     if (commit) {
         const int insertIndex = qBound(0, m_placeholderIndex, m_items.size());
         m_items.insert(insertIndex, m_dragItem);
+        persistCurrentOrder();
     } else {
         const int restoreIndex = qBound(0, m_dragFromIndex, m_items.size());
         m_items.insert(restoreIndex, m_dragItem);
@@ -599,6 +600,24 @@ void TodoPage::onTodoCompleted(qint64 id) {
     }
 
     DbManager::instance().markCompleted(id);
+}
+
+void TodoPage::persistCurrentOrder() {
+    QVector<qint64> orderedIds;
+    orderedIds.reserve(m_items.size());
+
+    for (auto *item : m_items) {
+        if (item == nullptr) {
+            continue;
+        }
+
+        const qint64 id = item->property("todo_id").toLongLong();
+        if (id >= 0) {
+            orderedIds.push_back(id);
+        }
+    }
+
+    DbManager::instance().updateTodoOrder(orderedIds);
 }
 
 void TodoPage::updateDragProxyPosition(const QPoint &globalPos) {

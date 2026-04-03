@@ -17,6 +17,8 @@ QJsonObject ConfigManager::getDefaultConfig() {
     defaultConfig["borderRadius"] = 10;
     defaultConfig["theme"] = "light";
     defaultConfig["todoWrapMode"] = "force";
+    defaultConfig["windowWidth"] = Config::width;
+    defaultConfig["windowHeight"] = Config::height;
 
     return defaultConfig;
 }
@@ -60,9 +62,19 @@ bool ConfigManager::readConfigJson() {
 
         if (document.isNull()) {
             qDebug() << "Invalid JSON format, creating default config.json";
+            m_configJson = getDefaultConfig();
+            writeConfigJson(m_configJson);
+            return true;
         }
 
-        m_configJson = document.object();
+        QJsonObject mergedConfig = getDefaultConfig();
+        const QJsonObject loadedConfig = document.object();
+        for (auto it = loadedConfig.constBegin(); it != loadedConfig.constEnd();
+             ++it) {
+            mergedConfig[it.key()] = it.value();
+        }
+
+        m_configJson = mergedConfig;
 
         return true;
     } catch (std::exception e) {
@@ -72,6 +84,8 @@ bool ConfigManager::readConfigJson() {
 }
 
 void ConfigManager::writeConfigJson(QJsonObject configJson) {
+    m_configJson = configJson;
+
     QFile file(Config::getConfigPath());
 
     if (file.open(QIODevice::WriteOnly)) {
