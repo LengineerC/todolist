@@ -4,6 +4,7 @@
 #include <QPushButton>
 #include <QScrollArea>
 #include <QTimer>
+#include <QtGlobal>
 #include <QVector>
 #include <QWidget>
 
@@ -27,7 +28,7 @@ class TodoPage : public QWidget {
     void onItemDragReleased(TodoItemWidget *item, const QPoint &globalPos);
 
   private:
-    void addTodoItem(const QString &text);
+    void addTodoItem(const QString &text, qint64 todoId = -1);
     void removeTodoItem(TodoItemWidget *item);
     void beginAddInline();
     void finishAddInline(bool confirm);
@@ -39,7 +40,7 @@ class TodoPage : public QWidget {
     void cancelDrag();
     int calcInsertIndex(int contentY) const;
     void rebuildListLayout(bool withAnimation);
-    void onTodoCompleted(const QString &text);
+    void onTodoCompleted(qint64 id);
     void updateDragProxyPosition(const QPoint &globalPos);
     void animateGapHeight(int from, int to);
 

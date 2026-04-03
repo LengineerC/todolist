@@ -6,11 +6,17 @@
 #include "todo_page.h"
 #include "utils.h"
 
+#include <QEvent>
 #include <QFrame>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QPainter>
 #include <QPushButton>
+
+#ifdef Q_OS_WIN
+#include <windows.h>
+#include <windowsx.h>
+#endif
 
 Widget::Widget(QWidget *parent)
     : QWidget(parent), ui(new Ui::Widget), m_navGroup(nullptr),
@@ -18,7 +24,8 @@ Widget::Widget(QWidget *parent)
     setWindowFlags(Qt::FramelessWindowHint | Qt::Window |
                    Qt::CustomizeWindowHint);
     setWindowFlag(Qt::WindowMaximizeButtonHint, false);
-    setFixedSize(Config::width, Config::height);
+    resize(Config::width, Config::height);
+    setMinimumSize(Config::width, Config::height);
     setAttribute(Qt::WA_TranslucentBackground);
 
     ui->setupUi(this);
@@ -146,6 +153,78 @@ QString Widget::currentRoute() const {
     }
 
     return QString();
+}
+
+void Widget::changeEvent(QEvent *event) {
+    if (event->type() == QEvent::WindowStateChange) {
+        if (isMaximized() || isFullScreen()) {
+            showNormal();
+        }
+    }
+
+    QWidget::changeEvent(event);
+}
+
+bool Widget::nativeEvent(const QByteArray &eventType, void *message,
+                         long *result) {
+#ifdef Q_OS_WIN
+    Q_UNUSED(eventType)
+
+    MSG *msg = static_cast<MSG *>(message);
+    if (msg->message == WM_NCHITTEST) {
+        const LONG borderWidth = 8;
+        const RECT winRect = {0, 0, width(), height()};
+        const long x = GET_X_LPARAM(msg->lParam) - frameGeometry().x();
+        const long y = GET_Y_LPARAM(msg->lParam) - frameGeometry().y();
+
+        const bool resizeW = minimumWidth() != maximumWidth();
+        const bool resizeH = minimumHeight() != maximumHeight();
+
+        if (resizeW && resizeH) {
+            if (x < winRect.left + borderWidth && y < winRect.top + borderWidth) {
+                *result = HTTOPLEFT;
+                return true;
+            }
+            if (x >= winRect.right - borderWidth && y < winRect.top + borderWidth) {
+                *result = HTTOPRIGHT;
+                return true;
+            }
+            if (x < winRect.left + borderWidth && y >= winRect.bottom - borderWidth) {
+                *result = HTBOTTOMLEFT;
+                return true;
+            }
+            if (x >= winRect.right - borderWidth &&
+                y >= winRect.bottom - borderWidth) {
+                *result = HTBOTTOMRIGHT;
+                return true;
+            }
+        }
+
+        if (resizeW) {
+            if (x < winRect.left + borderWidth) {
+                *result = HTLEFT;
+                return true;
+            }
+            if (x >= winRect.right - borderWidth) {
+                *result = HTRIGHT;
+                return true;
+            }
+        }
+
+        if (resizeH) {
+            if (y < winRect.top + borderWidth) {
+                *result = HTTOP;
+                return true;
+            }
+            if (y >= winRect.bottom - borderWidth) {
+                *result = HTBOTTOM;
+                return true;
+            }
+        }
+    }
+#endif
+
+    return QWidget::nativeEvent(eventType, message, result);
 }
 
 void Widget::onNavButtonClicked(QAbstractButton *button) {

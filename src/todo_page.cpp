@@ -2,6 +2,7 @@
 
 #include "config_manager.h"
 #include "constants.h"
+#include "db_manager.h"
 #include "todo_item_widget.h"
 #include "utils.h"
 
@@ -209,13 +210,13 @@ TodoPage::TodoPage(QWidget *parent)
     m_scrollArea->setWidget(m_scrollContent);
     rootLayout->addWidget(m_scrollArea);
 
-    addTodoItem("Todo item placeholder 01");
-    addTodoItem("Todo item placeholder 02 with long text that should "
-                "automatically wrap to multiple lines when the content becomes "
-                "too long for one row.");
-    addTodoItem("Todo item placeholder 03");
-    addTodoItem("Todo item placeholder 04");
-    addTodoItem("Todo item placeholder 05");
+    DbManager::instance().init();
+    const QVector<TodoRecord> todos = DbManager::instance().loadActiveTodos();
+    for (const auto &todo : todos) {
+        addTodoItem(todo.content, todo.id);
+    }
+
+    rebuildListLayout(false);
 }
 
 void TodoPage::onItemLongPressStarted(TodoItemWidget *item,
@@ -243,8 +244,9 @@ void TodoPage::onItemDragReleased(TodoItemWidget *item,
     finishDrag(true, globalPos);
 }
 
-void TodoPage::addTodoItem(const QString &text) {
+void TodoPage::addTodoItem(const QString &text, qint64 todoId) {
     auto *item = new TodoItemWidget(text, m_scrollContent);
+    item->setProperty("todo_id", todoId);
 
     connect(item, &TodoItemWidget::doubleClicked, this,
             [this](TodoItemWidget *clickedItem) {
@@ -269,7 +271,7 @@ void TodoPage::removeTodoItem(TodoItemWidget *item) {
         return;
     }
 
-    const QString finishedText = item->text();
+    const qint64 todoId = item->property("todo_id").toLongLong();
 
     if (item->graphicsEffect() == nullptr) {
         auto *effect = new QGraphicsOpacityEffect(item);
@@ -286,7 +288,7 @@ void TodoPage::removeTodoItem(TodoItemWidget *item) {
     fadeAnim->setEasingCurve(QEasingCurve::OutCubic);
 
     connect(fadeAnim, &QPropertyAnimation::finished, this,
-            [this, item, finishedText]() {
+            [this, item, todoId]() {
                 const int currentIndex = m_items.indexOf(item);
                 if (currentIndex < 0) {
                     return;
@@ -296,7 +298,7 @@ void TodoPage::removeTodoItem(TodoItemWidget *item) {
                 m_listLayout->removeWidget(item);
                 item->deleteLater();
 
-                onTodoCompleted(finishedText);
+                onTodoCompleted(todoId);
                 rebuildListLayout(true);
             });
 
@@ -322,7 +324,10 @@ void TodoPage::finishAddInline(bool confirm) {
 
     const QString text = m_addLineEdit->text().trimmed();
     if (confirm && !text.isEmpty()) {
-        addTodoItem(text);
+        const qint64 todoId = DbManager::instance().insertTodo(text);
+        if (todoId >= 0) {
+            addTodoItem(text, todoId);
+        }
     }
 
     m_addLineEdit->clear();
@@ -588,7 +593,13 @@ void TodoPage::rebuildListLayout(bool withAnimation) {
     }
 }
 
-void TodoPage::onTodoCompleted(const QString &text) { Q_UNUSED(text) }
+void TodoPage::onTodoCompleted(qint64 id) {
+    if (id < 0) {
+        return;
+    }
+
+    DbManager::instance().markCompleted(id);
+}
 
 void TodoPage::updateDragProxyPosition(const QPoint &globalPos) {
     if (!m_dragActive || m_dragProxy == nullptr) {

@@ -1,4 +1,5 @@
 #include "config_manager.h"
+#include "db_manager.h"
 #include "widget.h"
 
 #include <QApplication>
@@ -11,6 +12,7 @@ int main(int argc, char *argv[]) {
     QApplication a(argc, argv);
 
     ConfigManager::instance().readConfigJson();
+    DbManager::instance().init();
 
     int fontId = QFontDatabase::addApplicationFont(":/fonts/main_font");
     if (fontId != -1) {

@@ -12,12 +12,12 @@
 
 namespace {
 constexpr int kItemMinHeight = 56;
-constexpr int kLongPressMs = 320;
+constexpr int kLongPressMs = 200;
 } // namespace
 
 TodoItemWidget::TodoItemWidget(const QString &text, QWidget *parent)
     : QWidget(parent), m_label(new QLabel(this)), m_editor(new QLineEdit(this)),
-      m_cancelButton(new QPushButton("x", this)), m_pressing(false),
+      m_cancelButton(new QPushButton(this)), m_pressing(false),
       m_longPressActive(false), m_editing(false), m_text(text) {
     auto *layout = new QHBoxLayout(this);
     layout->setContentsMargins(12, 10, 12, 10);
@@ -31,49 +31,58 @@ TodoItemWidget::TodoItemWidget(const QString &text, QWidget *parent)
     m_label->setText(text);
     applyLabelStyle();
 
-    const QString theme = ConfigManager::instance().getConfig()["theme"].toString();
+    const QString theme =
+        ConfigManager::instance().getConfig()["theme"].toString();
     const QString inputTextColor =
         Utils::colorToRgba(Config::Themes::getTheme(theme).textColor, 255);
     const QString inputBgColor =
         Utils::colorToRgba(Config::Themes::getTheme(theme).backgroundColor, 40);
-    const QString inputBorderColor =
-        Utils::colorToRgba(Config::Themes::getReverseTheme(theme).backgroundColor,
-                           90);
+    const QString inputBorderColor = Utils::colorToRgba(
+        Config::Themes::getReverseTheme(theme).backgroundColor, 90);
 
     m_editor->setText(text);
     m_editor->setVisible(false);
     m_editor->installEventFilter(this);
-    m_editor->setStyleSheet(QString("QLineEdit {"
-                                    " color: %1;"
-                                    " background: %2;"
-                                    " border: 1px solid %3;"
-                                    " border-radius: 6px;"
-                                    " padding: 6px 10px;"
-                                    "}")
-                                .arg(inputTextColor, inputBgColor, inputBorderColor));
+    m_editor->setStyleSheet(
+        QString("QLineEdit {"
+                " color: %1;"
+                " background: %2;"
+                " border: 1px solid %3;"
+                " border-radius: 6px;"
+                " padding: 6px 10px;"
+                "}")
+            .arg(inputTextColor, inputBgColor, inputBorderColor));
 
+    QString btnBgColor = Utils::colorToRgba(
+        Config::Themes::getReverseTheme(
+            ConfigManager::instance().getConfig()["theme"].toString())
+            .backgroundColor,
+        100);
+    QColor baseTextColor =
+        Config::Themes::getTheme(
+            ConfigManager::instance().getConfig()["theme"].toString())
+            .textColor;
+    QColor iconColor = baseTextColor;
+    iconColor.setAlpha(100);
+    QIcon cancelIcon = Utils::getColoredSvg(":/icons/close", iconColor);
+    m_cancelButton->setIcon(cancelIcon);
     m_cancelButton->setVisible(false);
     m_cancelButton->setCursor(Qt::PointingHandCursor);
     m_cancelButton->setFocusPolicy(Qt::NoFocus);
     m_cancelButton->setFixedSize(22, 22);
     m_cancelButton->setStyleSheet(QString("QPushButton {"
-                                          " color: %1;"
                                           " background: transparent;"
-                                          " border: 1px solid %2;"
-                                          " border-radius: 11px;"
+                                          " border-radius: 2px;"
+                                          " height: 100%;"
                                           "}"
                                           "QPushButton:hover {"
-                                          " background: %3;"
+                                          " background: %1;"
                                           "}")
-                                      .arg(inputTextColor, inputBorderColor,
-                                           Utils::colorToRgba(
-                                               Config::Themes::getTheme(theme)
-                                                   .backgroundColor,
-                                               70)));
+                                      .arg(btnBgColor));
 
     layout->addWidget(m_label, 1);
     layout->addWidget(m_editor, 1);
-    layout->addWidget(m_cancelButton, 0, Qt::AlignTop);
+    layout->addWidget(m_cancelButton, 0, Qt::AlignCenter);
 
     connect(m_editor, &QLineEdit::returnPressed, this,
             [this]() { finishInlineEdit(true); });
@@ -124,9 +133,8 @@ int TodoItemWidget::preferredItemHeight() const {
     const QString displayText = formatDisplayText(m_text, targetWidth);
 
     QFontMetrics fm(m_label->font());
-    const QRect textRect =
-        fm.boundingRect(QRect(0, 0, targetWidth, 100000), wrapFlags(),
-                        displayText);
+    const QRect textRect = fm.boundingRect(QRect(0, 0, targetWidth, 100000),
+                                           wrapFlags(), displayText);
 
     return qMax(kItemMinHeight, textRect.height() + 20);
 }
@@ -222,9 +230,8 @@ void TodoItemWidget::updateDynamicHeight() {
     m_label->setText(displayText);
 
     QFontMetrics fm(m_label->font());
-    const QRect textRect =
-        fm.boundingRect(QRect(0, 0, targetWidth, 100000), wrapFlags(),
-                        displayText);
+    const QRect textRect = fm.boundingRect(QRect(0, 0, targetWidth, 100000),
+                                           wrapFlags(), displayText);
 
     const int totalHeight = qMax(kItemMinHeight, textRect.height() + 20);
 

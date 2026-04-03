@@ -3,6 +3,7 @@
 
 #include <QAbstractButton>
 #include <QButtonGroup>
+#include <QByteArray>
 #include <QHBoxLayout>
 #include <QMap>
 #include <QString>
@@ -28,6 +29,9 @@ class Widget : public QWidget {
 
   protected:
     void paintEvent(QPaintEvent *event);
+    void changeEvent(QEvent *event) override;
+    bool nativeEvent(const QByteArray &eventType, void *message,
+                     long *result) override;
 
   private slots:
     void onNavButtonClicked(QAbstractButton *button);

@@ -32,6 +32,11 @@ struct Themes {
 inline QString getConfigPath() {
     return QCoreApplication::applicationDirPath() + "/config.json";
 }
+
+inline QString getDatabasePath() {
+    return QCoreApplication::applicationDirPath() + "/data.db";
+}
+
 inline const int borderRadius = 10;
 
 } // namespace Config
