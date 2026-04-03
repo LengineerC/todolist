@@ -18,13 +18,16 @@ constexpr int kLongPressMs = 320;
 TodoItemWidget::TodoItemWidget(const QString &text, QWidget *parent)
     : QWidget(parent), m_label(new QLabel(this)), m_editor(new QLineEdit(this)),
       m_cancelButton(new QPushButton("x", this)), m_pressing(false),
-      m_longPressActive(false), m_editing(false) {
+      m_longPressActive(false), m_editing(false), m_text(text) {
     auto *layout = new QHBoxLayout(this);
     layout->setContentsMargins(12, 10, 12, 10);
     layout->setSpacing(8);
 
     m_label->setWordWrap(true);
     m_label->setAlignment(Qt::AlignLeft | Qt::AlignTop);
+    m_label->setTextInteractionFlags(Qt::NoTextInteraction);
+    m_label->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+    m_label->setMinimumWidth(0);
     m_label->setText(text);
     applyLabelStyle();
 
@@ -96,12 +99,13 @@ TodoItemWidget::TodoItemWidget(const QString &text, QWidget *parent)
     updateDynamicHeight();
 }
 
-QString TodoItemWidget::text() const { return m_label->text(); }
+QString TodoItemWidget::text() const { return m_text; }
 
 void TodoItemWidget::setText(const QString &text) {
-    m_label->setText(text);
+    m_text = text;
+    m_label->setText(formatDisplayText(m_text, qMax(1, width() - 24)));
     if (!m_editing) {
-        m_editor->setText(text);
+        m_editor->setText(m_text);
     }
     updateDynamicHeight();
 }
@@ -117,11 +121,12 @@ void TodoItemWidget::setTextHidden(bool hidden) {
 
 int TodoItemWidget::preferredItemHeight() const {
     const int targetWidth = qMax(1, width() - 24);
+    const QString displayText = formatDisplayText(m_text, targetWidth);
 
     QFontMetrics fm(m_label->font());
-    const QRect textRect = fm.boundingRect(
-        QRect(0, 0, targetWidth, 100000),
-        Qt::TextWordWrap | Qt::AlignLeft | Qt::AlignTop, m_label->text());
+    const QRect textRect =
+        fm.boundingRect(QRect(0, 0, targetWidth, 100000), wrapFlags(),
+                        displayText);
 
     return qMax(kItemMinHeight, textRect.height() + 20);
 }
@@ -212,11 +217,14 @@ bool TodoItemWidget::eventFilter(QObject *watched, QEvent *event) {
 
 void TodoItemWidget::updateDynamicHeight() {
     const int targetWidth = qMax(1, width() - 24);
+    const QString displayText = formatDisplayText(m_text, targetWidth);
+
+    m_label->setText(displayText);
 
     QFontMetrics fm(m_label->font());
-    const QRect textRect = fm.boundingRect(
-        QRect(0, 0, targetWidth, 100000),
-        Qt::TextWordWrap | Qt::AlignLeft | Qt::AlignTop, m_label->text());
+    const QRect textRect =
+        fm.boundingRect(QRect(0, 0, targetWidth, 100000), wrapFlags(),
+                        displayText);
 
     const int totalHeight = qMax(kItemMinHeight, textRect.height() + 20);
 
@@ -237,7 +245,7 @@ void TodoItemWidget::beginInlineEdit() {
     m_longPressActive = false;
     m_longPressTimer.stop();
 
-    m_editOriginalText = m_label->text();
+    m_editOriginalText = m_text;
     m_editor->setText(m_editOriginalText);
     m_label->hide();
     m_editor->show();
@@ -259,8 +267,9 @@ void TodoItemWidget::finishInlineEdit(bool confirm) {
         }
     }
 
-    m_label->setText(nextText);
-    m_editor->setText(nextText);
+    m_text = nextText;
+    m_label->setText(formatDisplayText(m_text, qMax(1, width() - 24)));
+    m_editor->setText(m_text);
 
     m_editor->hide();
     m_cancelButton->hide();
@@ -268,6 +277,51 @@ void TodoItemWidget::finishInlineEdit(bool confirm) {
     m_editing = false;
 
     updateDynamicHeight();
+}
+
+QString TodoItemWidget::formatDisplayText(const QString &text,
+                                          int maxWidth) const {
+    if (text.isEmpty() || !forceWrapEnabled()) {
+        return text;
+    }
+
+    QFontMetrics fm(m_label->font());
+    QString result;
+    result.reserve(text.size() + text.size() / 16);
+
+    int runWidth = 0;
+    for (const QChar ch : text) {
+        if (ch == '\n') {
+            result.append(ch);
+            runWidth = 0;
+            continue;
+        }
+
+        const int charWidth = fm.horizontalAdvance(ch);
+        if (runWidth > 0 && runWidth + charWidth > maxWidth) {
+            result.append('\n');
+            runWidth = 0;
+        }
+
+        result.append(ch);
+        runWidth += charWidth;
+    }
+
+    return result;
+}
+
+int TodoItemWidget::wrapFlags() const {
+    int flags = Qt::TextWordWrap | Qt::AlignLeft | Qt::AlignTop;
+    if (forceWrapEnabled()) {
+        flags |= Qt::TextWrapAnywhere;
+    }
+    return flags;
+}
+
+bool TodoItemWidget::forceWrapEnabled() const {
+    const QString wrapMode =
+        ConfigManager::instance().getConfig()["todoWrapMode"].toString("force");
+    return wrapMode != "word";
 }
 
 void TodoItemWidget::applyLabelStyle() {

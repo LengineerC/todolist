@@ -2,5 +2,8 @@
     <qresource prefix="/fonts">
         <file alias="main_font">assets/fonts/SourceHanSansSC-Medium.otf</file>
     </qresource>
-    <qresource prefix="/images"/>
+    <qresource prefix="/icons">
+        <file alias="add">assets/icons/add.svg</file>
+        <file alias="close">assets/icons/close.svg</file>
+    </qresource>
 </RCC>

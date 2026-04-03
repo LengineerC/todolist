@@ -35,9 +35,12 @@ class TodoItemWidget : public QWidget {
     bool eventFilter(QObject *watched, QEvent *event) override;
 
   private:
+    int wrapFlags() const;
+    bool forceWrapEnabled() const;
     void updateDynamicHeight();
     void finishInlineEdit(bool confirm);
     void applyLabelStyle();
+    QString formatDisplayText(const QString &text, int maxWidth) const;
 
     QLabel *m_label;
     QLineEdit *m_editor;
@@ -46,6 +49,7 @@ class TodoItemWidget : public QWidget {
     bool m_pressing;
     bool m_longPressActive;
     bool m_editing;
+    QString m_text;
     QString m_editOriginalText;
     QPoint m_pressPos;
 };

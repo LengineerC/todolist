@@ -8,6 +8,7 @@
 #include <QApplication>
 #include <QEvent>
 #include <QFontMetrics>
+#include <QGraphicsOpacityEffect>
 #include <QHBoxLayout>
 #include <QKeyEvent>
 #include <QLabel>
@@ -31,9 +32,9 @@ TodoPage::TodoPage(QWidget *parent)
     : QWidget(parent), m_scrollArea(nullptr), m_scrollContent(nullptr),
       m_listLayout(nullptr), m_addArea(nullptr), m_addEditorRow(nullptr),
       m_addLineEdit(nullptr), m_addCancelButton(nullptr),
-      m_addInlineActive(false), m_placeholderItem(nullptr), m_dragProxy(nullptr),
-      m_dragActive(false), m_dragItem(nullptr), m_dragFromIndex(-1),
-      m_placeholderIndex(-1) {
+      m_addInlineActive(false), m_placeholderItem(nullptr),
+      m_dragProxy(nullptr), m_dragActive(false), m_dragItem(nullptr),
+      m_dragFromIndex(-1), m_placeholderIndex(-1) {
     auto *rootLayout = new QVBoxLayout(this);
     rootLayout->setContentsMargins(0, 0, 0, 0);
     rootLayout->setSpacing(0);
@@ -69,11 +70,12 @@ TodoPage::TodoPage(QWidget *parent)
             ConfigManager::instance().getConfig()["theme"].toString())
             .backgroundColor,
         20);
-    QString textColor = Utils::colorToRgba(
+
+    QColor baseTextColor =
         Config::Themes::getTheme(
             ConfigManager::instance().getConfig()["theme"].toString())
-            .textColor,
-        150);
+            .textColor;
+    QString textColor = Utils::colorToRgba(baseTextColor, 150);
 
     QString borderColor = Utils::colorToRgba(
         Config::Themes::getReverseTheme(
@@ -88,13 +90,16 @@ TodoPage::TodoPage(QWidget *parent)
                                    .arg(proxyBgColor, textColor, borderColor));
 
     m_addArea = new QPushButton(m_scrollContent);
-    m_addArea->setText("");
+    QColor iconColor = baseTextColor;
+    iconColor.setAlpha(100);
+    QIcon addIcon = Utils::getColoredSvg(":/icons/add", iconColor);
+    m_addArea->setIcon(addIcon);
     m_addArea->setCursor(Qt::PointingHandCursor);
     m_addArea->setFixedHeight(kItemMinHeight);
     m_addArea->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     m_addArea->setStyleSheet(QString("QPushButton {"
                                      " background: transparent;"
-                                     " border: 1px dashed rgba(0, 0, 0, 70);"
+                                    //  " border: 1px dashed rgba(0, 0, 0, 70);"
                                      " border-radius: 8px;"
                                      "}"
                                      "QPushButton:hover {"
@@ -123,51 +128,49 @@ TodoPage::TodoPage(QWidget *parent)
             ConfigManager::instance().getConfig()["theme"].toString())
             .textColor,
         255);
-    const QString inputBgColor = Utils::colorToRgba(
-        Config::Themes::getTheme(
-            ConfigManager::instance().getConfig()["theme"].toString())
-            .backgroundColor,
-        40);
-    const QString inputBorderColor = Utils::colorToRgba(
-        Config::Themes::getReverseTheme(
-            ConfigManager::instance().getConfig()["theme"].toString())
-            .backgroundColor,
-        100);
+    // const QString inputBgColor = Utils::colorToRgba(
+    //     Config::Themes::getTheme(
+    //         ConfigManager::instance().getConfig()["theme"].toString())
+    //         .backgroundColor,
+    //     40);
+    // const QString inputBorderColor = Utils::colorToRgba(
+    //     Config::Themes::getReverseTheme(
+    //         ConfigManager::instance().getConfig()["theme"].toString())
+    //         .backgroundColor,
+    //     100);
 
-    m_addLineEdit->setStyleSheet(QString("QLineEdit {"
-                                         " color: %1;"
-                                         " background: %2;"
-                                         " border: 1px solid %3;"
-                                         " border-radius: 6px;"
-                                         " padding: 6px 10px;"
-                                         "}")
-                                     .arg(inputTextColor, inputBgColor,
-                                          inputBorderColor));
+    m_addLineEdit->setStyleSheet(
+        QString("QLineEdit {"
+                " color: %1;"
+                " height: 100%;"
+                " background: transparent;"
+                " border: none;"
+                // " background: %2;"
+                // " border: 1px solid %3;"
+                // " border-radius: 6px;"
+                // " padding: 6px 10px;"
+                "}")
+            .arg(inputTextColor));
 
-    m_addCancelButton = new QPushButton("x", m_addEditorRow);
+    m_addCancelButton = new QPushButton(m_addEditorRow);
+    QIcon cancelIcon = Utils::getColoredSvg(":/icons/close", iconColor);
+    m_addCancelButton->setIcon(cancelIcon);
     m_addCancelButton->setCursor(Qt::PointingHandCursor);
     m_addCancelButton->setFocusPolicy(Qt::NoFocus);
     m_addCancelButton->setFixedSize(22, 22);
     m_addCancelButton->setStyleSheet(
         QString("QPushButton {"
-                " color: %1;"
                 " background: transparent;"
-                " border: 1px solid %2;"
-                " border-radius: 11px;"
+                " border-radius: 2px;"
+                " height: 100%;"
                 "}"
                 "QPushButton:hover {"
-                " background: %3;"
+                " background: %1;"
                 "}")
-            .arg(inputTextColor, inputBorderColor,
-                 Utils::colorToRgba(
-                     Config::Themes::getTheme(
-                         ConfigManager::instance().getConfig()["theme"]
-                             .toString())
-                         .backgroundColor,
-                     70)));
+            .arg(borderColor));
 
     addEditorLayout->addWidget(m_addLineEdit, 1);
-    addEditorLayout->addWidget(m_addCancelButton, 0, Qt::AlignTop);
+    addEditorLayout->addWidget(m_addCancelButton, 0, Qt::AlignCenter);
 
     connect(m_addLineEdit, &QLineEdit::returnPressed, this,
             [this]() { finishAddInline(true); });
@@ -267,12 +270,37 @@ void TodoPage::removeTodoItem(TodoItemWidget *item) {
     }
 
     const QString finishedText = item->text();
-    m_items.removeAt(index);
-    m_listLayout->removeWidget(item);
-    item->deleteLater();
 
-    onTodoCompleted(finishedText);
-    rebuildListLayout(false);
+    if (item->graphicsEffect() == nullptr) {
+        auto *effect = new QGraphicsOpacityEffect(item);
+        effect->setOpacity(1.0);
+        item->setGraphicsEffect(effect);
+    }
+
+    auto *effect = qobject_cast<QGraphicsOpacityEffect *>(item->graphicsEffect());
+
+    auto *fadeAnim = new QPropertyAnimation(effect, "opacity", item);
+    fadeAnim->setDuration(160);
+    fadeAnim->setStartValue(1.0);
+    fadeAnim->setEndValue(0.0);
+    fadeAnim->setEasingCurve(QEasingCurve::OutCubic);
+
+    connect(fadeAnim, &QPropertyAnimation::finished, this,
+            [this, item, finishedText]() {
+                const int currentIndex = m_items.indexOf(item);
+                if (currentIndex < 0) {
+                    return;
+                }
+
+                m_items.removeAt(currentIndex);
+                m_listLayout->removeWidget(item);
+                item->deleteLater();
+
+                onTodoCompleted(finishedText);
+                rebuildListLayout(true);
+            });
+
+    fadeAnim->start(QAbstractAnimation::DeleteWhenStopped);
 }
 
 void TodoPage::beginAddInline() {
@@ -337,10 +365,17 @@ void TodoPage::beginDrag(TodoItemWidget *item, const QPoint &globalPos) {
     m_dragProxy->setText(item->text());
     m_dragProxy->setFixedWidth(dragWidth);
 
+    const QString wrapMode =
+        ConfigManager::instance().getConfig()["todoWrapMode"].toString("force");
+    int wrapFlags = Qt::TextWordWrap | Qt::AlignLeft | Qt::AlignTop;
+    if (wrapMode != "word") {
+        wrapFlags |= Qt::TextWrapAnywhere;
+    }
+
     QFontMetrics fm(m_dragProxy->font());
-    const QRect textRect = fm.boundingRect(
-        QRect(0, 0, qMax(1, dragWidth - 24), 100000),
-        Qt::TextWordWrap | Qt::AlignLeft | Qt::AlignTop, item->text());
+    const QRect textRect =
+        fm.boundingRect(QRect(0, 0, qMax(1, dragWidth - 24), 100000),
+                        wrapFlags, item->text());
     const int proxyHeight = qMax(kItemMinHeight, textRect.height() + 20);
     m_dragProxy->setFixedHeight(proxyHeight);
     m_dragProxy->show();

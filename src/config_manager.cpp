@@ -1,4 +1,4 @@
-#include "config_manager.h";
+#include "config_manager.h"
 
 ConfigManager::ConfigManager(QObject *parent) {
     if (!m_configWatcher.addPath(Config::getConfigPath())) {
@@ -16,6 +16,7 @@ QJsonObject ConfigManager::getDefaultConfig() {
     QJsonObject defaultConfig;
     defaultConfig["borderRadius"] = 10;
     defaultConfig["theme"] = "light";
+    defaultConfig["todoWrapMode"] = "force";
 
     return defaultConfig;
 }
