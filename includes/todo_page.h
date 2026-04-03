@@ -18,6 +18,7 @@ class TodoPage : public QWidget {
 
   public:
     explicit TodoPage(QWidget *parent = nullptr);
+    void refreshData();
 
   protected:
     bool eventFilter(QObject *watched, QEvent *event) override;

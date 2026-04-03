@@ -2,11 +2,13 @@
 #include "./ui_widget.h"
 #include "config_manager.h"
 #include "constants.h"
+#include "done_page.h"
 #include "route_page.h"
 #include "todo_page.h"
 #include "utils.h"
 
 #include <QEvent>
+#include <QFontDatabase>
 #include <QFrame>
 #include <QHBoxLayout>
 #include <QJsonObject>
@@ -59,7 +61,7 @@ Widget::Widget(QWidget *parent)
     setupRouter();
 
     registerPage("todo", "Todo", new TodoPage(this));
-    registerPage("done", "Done", new RoutePage("Done", this));
+    registerPage("done", "Done", new DonePage(this));
     registerPage("timer", "Timer", new RoutePage("Timer", this));
 
     switchToPage("todo");
@@ -116,6 +118,26 @@ void Widget::registerPage(const QString &routeKey, const QString &title,
     button->setCheckable(true);
     button->setCursor(Qt::PointingHandCursor);
     button->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+
+    static QString heavyFamily;
+    static bool heavyFontTried = false;
+    if (!heavyFontTried) {
+        heavyFontTried = true;
+        const int heavyFontId =
+            QFontDatabase::addApplicationFont(":/fonts/heavy_font");
+        if (heavyFontId != -1) {
+            const QStringList families =
+                QFontDatabase::applicationFontFamilies(heavyFontId);
+            if (!families.isEmpty()) {
+                heavyFamily = families.first();
+            }
+        }
+    }
+    if (!heavyFamily.isEmpty()) {
+        QFont navFont = button->font();
+        navFont.setFamily(heavyFamily);
+        button->setFont(navFont);
+    }
     const QColor textColor =
         Config::Themes::getTheme(
             ConfigManager::instance().getConfig()["theme"].toString())
@@ -145,6 +167,11 @@ void Widget::registerPage(const QString &routeKey, const QString &title,
         auto *separator = new QLabel("|", this);
         separator->setStyleSheet(QString("color: %1; padding: 0 2px; font-weight: 800;")
                                      .arg(Utils::colorToRgba(textColor, 200)));
+        if (!heavyFamily.isEmpty()) {
+            QFont sepFont = separator->font();
+            sepFont.setFamily(heavyFamily);
+            separator->setFont(sepFont);
+        }
         m_navLeftLayout->addWidget(separator);
     }
     m_navLeftLayout->addWidget(button);
@@ -161,6 +188,13 @@ bool Widget::switchToPage(const QString &routeKey) {
 
     const int index = m_routeToIndex.value(routeKey);
     ui->stackPages->setCurrentIndex(index);
+
+    if (auto *todoPage = qobject_cast<TodoPage *>(ui->stackPages->widget(index))) {
+        todoPage->refreshData();
+    }
+    if (auto *donePage = qobject_cast<DonePage *>(ui->stackPages->widget(index))) {
+        donePage->refreshData();
+    }
 
     for (auto it = m_buttonToRoute.constBegin();
          it != m_buttonToRoute.constEnd(); ++it) {

@@ -32,8 +32,12 @@ class DbManager : public QObject {
 
     bool init();
     QVector<TodoRecord> loadActiveTodos();
+    QVector<TodoRecord> loadCompletedTodos();
     qint64 insertTodo(const QString &content);
     bool markCompleted(qint64 id);
+    bool restoreTodo(qint64 id);
+    bool deleteTodo(qint64 id);
+    bool clearCompletedTodos();
     bool updateTodoOrder(const QVector<qint64> &orderedIds);
 
     DbManager(const DbManager &) = delete;

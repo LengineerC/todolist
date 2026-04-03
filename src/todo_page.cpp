@@ -210,6 +210,31 @@ TodoPage::TodoPage(QWidget *parent)
     m_scrollArea->setWidget(m_scrollContent);
     rootLayout->addWidget(m_scrollArea);
 
+    refreshData();
+
+    rebuildListLayout(false);
+}
+
+void TodoPage::refreshData() {
+    if (m_dragActive) {
+        cancelDrag();
+    }
+
+    if (m_addInlineActive) {
+        m_addInlineActive = false;
+        m_addLineEdit->clear();
+        m_addEditorRow->hide();
+        m_addArea->show();
+    }
+
+    for (auto *item : m_items) {
+        if (item != nullptr) {
+            m_listLayout->removeWidget(item);
+            item->deleteLater();
+        }
+    }
+    m_items.clear();
+
     DbManager::instance().init();
     const QVector<TodoRecord> todos = DbManager::instance().loadActiveTodos();
     for (const auto &todo : todos) {

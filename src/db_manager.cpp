@@ -128,6 +128,32 @@ QVector<TodoRecord> DbManager::loadActiveTodos() {
     return todos;
 }
 
+QVector<TodoRecord> DbManager::loadCompletedTodos() {
+    QVector<TodoRecord> todos;
+    if (!init()) {
+        return todos;
+    }
+
+    QSqlQuery query(m_db);
+    if (!query.exec("SELECT id, time, content, completed, sort_order FROM todos WHERE "
+                    "completed = 1 ORDER BY time DESC, id DESC")) {
+        qWarning() << "Failed to load completed todos:" << query.lastError().text();
+        return todos;
+    }
+
+    while (query.next()) {
+        TodoRecord record;
+        record.id = query.value(0).toLongLong();
+        record.time = query.value(1).toString();
+        record.content = query.value(2).toString();
+        record.completed = query.value(3).toInt() != 0;
+        record.sortOrder = query.value(4).toInt();
+        todos.push_back(record);
+    }
+
+    return todos;
+}
+
 qint64 DbManager::insertTodo(const QString &content) {
     if (!init()) {
         return -1;
@@ -199,6 +225,113 @@ bool DbManager::markCompleted(qint64 id) {
 
     if (!m_db.commit()) {
         qWarning() << "Failed to commit update transaction:"
+                   << m_db.lastError().text();
+        m_db.rollback();
+        return false;
+    }
+
+    return true;
+}
+
+bool DbManager::restoreTodo(qint64 id) {
+    if (!init()) {
+        return false;
+    }
+
+    if (!m_db.transaction()) {
+        qWarning() << "Failed to start restore transaction:"
+                   << m_db.lastError().text();
+        return false;
+    }
+
+    int maxSortOrder = 0;
+    QSqlQuery maxOrderQuery(m_db);
+    if (!maxOrderQuery.exec(
+            "SELECT COALESCE(MAX(sort_order), 0) FROM todos WHERE completed = 0")) {
+        qWarning() << "Failed to query max sort order for restore:"
+                   << maxOrderQuery.lastError().text();
+        m_db.rollback();
+        return false;
+    }
+    if (maxOrderQuery.next()) {
+        maxSortOrder = maxOrderQuery.value(0).toInt();
+    }
+
+    QSqlQuery query(m_db);
+    query.prepare(
+        "UPDATE todos SET completed = 0, time = ?, sort_order = ? WHERE id = ?");
+    query.addBindValue(currentIsoTime());
+    query.addBindValue(maxSortOrder + 1);
+    query.addBindValue(id);
+
+    if (!query.exec()) {
+        qWarning() << "Failed to restore todo:" << query.lastError().text();
+        m_db.rollback();
+        return false;
+    }
+
+    if (!m_db.commit()) {
+        qWarning() << "Failed to commit restore transaction:"
+                   << m_db.lastError().text();
+        m_db.rollback();
+        return false;
+    }
+
+    return true;
+}
+
+bool DbManager::deleteTodo(qint64 id) {
+    if (!init()) {
+        return false;
+    }
+
+    if (!m_db.transaction()) {
+        qWarning() << "Failed to start delete transaction:"
+                   << m_db.lastError().text();
+        return false;
+    }
+
+    QSqlQuery query(m_db);
+    query.prepare("DELETE FROM todos WHERE id = ?");
+    query.addBindValue(id);
+
+    if (!query.exec()) {
+        qWarning() << "Failed to delete todo:" << query.lastError().text();
+        m_db.rollback();
+        return false;
+    }
+
+    if (!m_db.commit()) {
+        qWarning() << "Failed to commit delete transaction:"
+                   << m_db.lastError().text();
+        m_db.rollback();
+        return false;
+    }
+
+    return true;
+}
+
+bool DbManager::clearCompletedTodos() {
+    if (!init()) {
+        return false;
+    }
+
+    if (!m_db.transaction()) {
+        qWarning() << "Failed to start clear completed transaction:"
+                   << m_db.lastError().text();
+        return false;
+    }
+
+    QSqlQuery query(m_db);
+    if (!query.exec("DELETE FROM todos WHERE completed = 1")) {
+        qWarning() << "Failed to clear completed todos:"
+                   << query.lastError().text();
+        m_db.rollback();
+        return false;
+    }
+
+    if (!m_db.commit()) {
+        qWarning() << "Failed to commit clear completed transaction:"
                    << m_db.lastError().text();
         m_db.rollback();
         return false;
