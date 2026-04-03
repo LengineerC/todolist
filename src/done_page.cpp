@@ -127,7 +127,7 @@ QWidget *DonePage::buildDateGroup(const QString &dateText) {
             .textColor,
         150);
     dateLabel->setStyleSheet(
-        QString("font-size: 20px; font-weight: 800; color: %1;").arg(textColor));
+        QString("font-size: 20px; font-weight: bold; color: %1;").arg(textColor));
 
     groupLayout->addWidget(dateLabel);
     return group;

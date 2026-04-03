@@ -1,7 +1,7 @@
 <RCC>
     <qresource prefix="/fonts">
         <file alias="main_font">assets/fonts/SourceHanSansSC-Medium.otf</file>
-        <file alias="heavy_font">assets/fonts/SourceHanSansSC-Heavy.otf</file>
+        <file alias="heavy_font">assets/fonts/SourceHanSansSC-Heavy.subset.otf</file>
     </qresource>
     <qresource prefix="/icons">
         <file alias="add">assets/icons/add.svg</file>

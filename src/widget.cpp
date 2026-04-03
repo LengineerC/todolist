@@ -151,7 +151,7 @@ void Widget::registerPage(const QString &routeKey, const QString &title,
                                   " text-align: center;"
                                   " color: %1;"
                                   " font-size: 24px;"
-                                  " font-weight: 800;"
+                                  " font-weight: 900;"
                                   "}"
                                   "QPushButton:hover {"
                                   " color: %2;"
@@ -165,7 +165,7 @@ void Widget::registerPage(const QString &routeKey, const QString &title,
 
     if (m_hasRouteButton) {
         auto *separator = new QLabel("|", this);
-        separator->setStyleSheet(QString("color: %1; padding: 0 2px; font-weight: 800;")
+        separator->setStyleSheet(QString("color: %1; padding: 0 2px; font-weight: 900;")
                                      .arg(Utils::colorToRgba(textColor, 200)));
         if (!heavyFamily.isEmpty()) {
             QFont sepFont = separator->font();
