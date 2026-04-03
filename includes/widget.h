@@ -6,6 +6,8 @@
 #include <QByteArray>
 #include <QHBoxLayout>
 #include <QMap>
+#include <QMoveEvent>
+#include <QPoint>
 #include <QResizeEvent>
 #include <QSize>
 #include <QString>
@@ -36,13 +38,14 @@ class Widget : public QWidget {
     bool nativeEvent(const QByteArray &eventType, void *message,
                      long *result) override;
     void resizeEvent(QResizeEvent *event) override;
+    void moveEvent(QMoveEvent *event) override;
 
   private slots:
     void onNavButtonClicked(QAbstractButton *button);
 
   private:
     void setupRouter();
-    void persistWindowSize();
+    void persistWindowGeometry();
 
     Ui::Widget *ui;
     QButtonGroup *m_navGroup;
@@ -51,6 +54,8 @@ class Widget : public QWidget {
     QHBoxLayout *m_navLeftLayout;
     bool m_hasRouteButton;
     QTimer m_resizeSaveTimer;
+    QTimer m_moveSaveTimer;
     QSize m_lastSavedSize;
+    QPoint m_lastSavedPos;
 };
 #endif // WIDGET_H

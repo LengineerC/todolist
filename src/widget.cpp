@@ -22,7 +22,8 @@
 
 Widget::Widget(QWidget *parent)
     : QWidget(parent), ui(new Ui::Widget), m_navGroup(nullptr),
-      m_navLeftLayout(nullptr), m_hasRouteButton(false), m_lastSavedSize(0, 0) {
+      m_navLeftLayout(nullptr), m_hasRouteButton(false), m_lastSavedSize(0, 0),
+      m_lastSavedPos(0, 0) {
     setWindowFlags(Qt::FramelessWindowHint | Qt::Window |
                    Qt::CustomizeWindowHint);
     setWindowFlag(Qt::WindowMaximizeButtonHint, false);
@@ -31,7 +32,12 @@ Widget::Widget(QWidget *parent)
     m_resizeSaveTimer.setInterval(350);
     m_resizeSaveTimer.setSingleShot(true);
     connect(&m_resizeSaveTimer, &QTimer::timeout, this,
-            &Widget::persistWindowSize);
+            &Widget::persistWindowGeometry);
+
+    m_moveSaveTimer.setInterval(350);
+    m_moveSaveTimer.setSingleShot(true);
+    connect(&m_moveSaveTimer, &QTimer::timeout, this,
+            &Widget::persistWindowGeometry);
     setAttribute(Qt::WA_TranslucentBackground);
 
     ui->setupUi(this);
@@ -42,7 +48,13 @@ Widget::Widget(QWidget *parent)
     const int restoredHeight = qMax(
         Config::height, config["windowHeight"].toInt(Config::height));
     resize(restoredWidth, restoredHeight);
+
+    if (!config["windowX"].isNull() && !config["windowY"].isNull()) {
+        move(config["windowX"].toInt(), config["windowY"].toInt());
+    }
+
     m_lastSavedSize = size();
+    m_lastSavedPos = pos();
 
     setupRouter();
 
@@ -188,6 +200,7 @@ bool Widget::nativeEvent(const QByteArray &eventType, void *message,
     MSG *msg = static_cast<MSG *>(message);
     if (msg->message == WM_NCHITTEST) {
         const LONG borderWidth = 8;
+        const LONG captionHeight = 44;
         const RECT winRect = {0, 0, width(), height()};
         const long x = GET_X_LPARAM(msg->lParam) - frameGeometry().x();
         const long y = GET_Y_LPARAM(msg->lParam) - frameGeometry().y();
@@ -236,6 +249,16 @@ bool Widget::nativeEvent(const QByteArray &eventType, void *message,
                 return true;
             }
         }
+
+        if (y >= winRect.top + borderWidth && y < winRect.top + captionHeight) {
+            QWidget *hitWidget = childAt(static_cast<int>(x), static_cast<int>(y));
+            if (hitWidget == nullptr ||
+                (!qobject_cast<QAbstractButton *>(hitWidget) &&
+                 !hitWidget->property("dragDisabled").toBool())) {
+                *result = HTCAPTION;
+                return true;
+            }
+        }
     }
 #endif
 
@@ -252,21 +275,34 @@ void Widget::resizeEvent(QResizeEvent *event) {
     m_resizeSaveTimer.start();
 }
 
-void Widget::persistWindowSize() {
+void Widget::moveEvent(QMoveEvent *event) {
+    QWidget::moveEvent(event);
+
     if (isMaximized() || isFullScreen()) {
         return;
     }
 
-    if (size() == m_lastSavedSize) {
+    m_moveSaveTimer.start();
+}
+
+void Widget::persistWindowGeometry() {
+    if (isMaximized() || isFullScreen()) {
+        return;
+    }
+
+    if (size() == m_lastSavedSize && pos() == m_lastSavedPos) {
         return;
     }
 
     QJsonObject config = ConfigManager::instance().getConfig();
     config["windowWidth"] = size().width();
     config["windowHeight"] = size().height();
+    config["windowX"] = pos().x();
+    config["windowY"] = pos().y();
     ConfigManager::instance().writeConfigJson(config);
 
     m_lastSavedSize = size();
+    m_lastSavedPos = pos();
 }
 
 void Widget::onNavButtonClicked(QAbstractButton *button) {

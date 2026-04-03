@@ -19,6 +19,8 @@ QJsonObject ConfigManager::getDefaultConfig() {
     defaultConfig["todoWrapMode"] = "force";
     defaultConfig["windowWidth"] = Config::width;
     defaultConfig["windowHeight"] = Config::height;
+    defaultConfig["windowX"] = QJsonValue(QJsonValue::Null);
+    defaultConfig["windowY"] = QJsonValue(QJsonValue::Null);
 
     return defaultConfig;
 }
