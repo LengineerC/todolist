@@ -8,8 +8,13 @@
 #include <QGuiApplication>
 
 int main(int argc, char *argv[]) {
+#if defined(Q_OS_WIN)
     QGuiApplication::setHighDpiScaleFactorRoundingPolicy(
         Qt::HighDpiScaleFactorRoundingPolicy::Floor);
+#elif defined(Q_OS_MACOS) || defined(Q_OS_MAC)
+    QGuiApplication::setHighDpiScaleFactorRoundingPolicy(
+        Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
+#endif
     QApplication a(argc, argv);
 
     ConfigManager::instance().readConfigJson();

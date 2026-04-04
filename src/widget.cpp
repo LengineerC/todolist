@@ -18,11 +18,31 @@
 #include <QJsonObject>
 #include <QLabel>
 #include <QMenu>
+#include <QMouseEvent>
 #include <QPainter>
 #include <QPushButton>
 #include <QResizeEvent>
+#include <QScreen>
 #include <QSystemTrayIcon>
 #include <QWindow>
+
+namespace {
+int baseWindowWidth() {
+#if defined(Q_OS_MACOS) || defined(Q_OS_MAC)
+    return 420;
+#else
+    return Config::width;
+#endif
+}
+
+int baseWindowHeight() {
+#if defined(Q_OS_MACOS) || defined(Q_OS_MAC)
+    return 520;
+#else
+    return Config::height;
+#endif
+}
+} // namespace
 
 #ifdef Q_OS_WIN
 #include <windows.h>
@@ -39,7 +59,7 @@ Widget::Widget(QWidget *parent)
                    Qt::CustomizeWindowHint);
     setWindowFlag(Qt::WindowMaximizeButtonHint, false);
     setAttribute(Qt::WA_TranslucentBackground);
-    setMinimumSize(Config::width, Config::height);
+    setMinimumSize(baseWindowWidth(), baseWindowHeight());
 
     m_resizeSaveTimer.setInterval(350);
     m_resizeSaveTimer.setSingleShot(true);
@@ -54,10 +74,21 @@ Widget::Widget(QWidget *parent)
     ui->setupUi(this);
 
     const QJsonObject config = ConfigManager::instance().getConfig();
-    const int restoredWidth =
-        qMax(Config::width, config["windowWidth"].toInt(Config::width));
-    const int restoredHeight =
-        qMax(Config::height, config["windowHeight"].toInt(Config::height));
+    int restoredWidth =
+        qMax(baseWindowWidth(), config["windowWidth"].toInt(baseWindowWidth()));
+    int restoredHeight =
+        qMax(baseWindowHeight(),
+             config["windowHeight"].toInt(baseWindowHeight()));
+#if defined(Q_OS_MACOS) || defined(Q_OS_MAC)
+    if (QScreen *activeScreen = screen(); activeScreen != nullptr) {
+        const QRect available = activeScreen->availableGeometry();
+        const int maxWidth = qMax(baseWindowWidth(), available.width() * 85 / 100);
+        const int maxHeight =
+            qMax(baseWindowHeight(), available.height() * 85 / 100);
+        restoredWidth = qMin(restoredWidth, maxWidth);
+        restoredHeight = qMin(restoredHeight, maxHeight);
+    }
+#endif
     resize(restoredWidth, restoredHeight);
 
     if (!config["windowX"].isNull() && !config["windowY"].isNull()) {
@@ -392,16 +423,49 @@ bool Widget::eventFilter(QObject *watched, QEvent *event) {
     Q_UNUSED(event)
     return QWidget::eventFilter(watched, event);
 #else
-    if (!m_isLocked || m_lockBtn == nullptr) {
-        return QWidget::eventFilter(watched, event);
-    }
-
     auto *targetWidget = qobject_cast<QWidget *>(watched);
     if (targetWidget == nullptr || targetWidget->window() != this) {
         return QWidget::eventFilter(watched, event);
     }
 
     const QEvent::Type type = event->type();
+
+    if (!m_isLocked) {
+        if (type == QEvent::MouseButtonPress) {
+            auto *mouseEvent = static_cast<QMouseEvent *>(event);
+            if (mouseEvent->button() == Qt::LeftButton) {
+                QWidget *cursor = targetWidget;
+                bool isButtonOrDragDisabled = false;
+                while (cursor != nullptr) {
+                    if (qobject_cast<QAbstractButton *>(cursor) != nullptr ||
+                        cursor->property("dragDisabled").toBool()) {
+                        isButtonOrDragDisabled = true;
+                        break;
+                    }
+                    cursor = cursor->parentWidget();
+                }
+
+                const QPoint cursorInWidget =
+                    mapFromGlobal(mouseEvent->globalPosition().toPoint());
+                const int captionHeight = qMax(36, ui->navBar->height() + 8);
+
+                if (!isButtonOrDragDisabled && cursorInWidget.y() >= 0 &&
+                    cursorInWidget.y() < captionHeight) {
+                    if (QWindow *w = windowHandle(); w != nullptr) {
+                        w->startSystemMove();
+                        event->accept();
+                        return true;
+                    }
+                }
+            }
+        }
+        return QWidget::eventFilter(watched, event);
+    }
+
+    if (m_lockBtn == nullptr) {
+        return QWidget::eventFilter(watched, event);
+    }
+
     const bool isBlockedType =
         type == QEvent::MouseButtonPress ||
         type == QEvent::MouseButtonRelease ||
@@ -488,7 +552,7 @@ void Widget::setLocked(bool locked) {
         setWindowClickThrough(true);
         m_lockHoverTimer.start();
     } else {
-        setMinimumSize(Config::width, Config::height);
+        setMinimumSize(baseWindowWidth(), baseWindowHeight());
         setMaximumSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX);
         setWindowClickThrough(false);
         m_lockHoverTimer.stop();
@@ -643,6 +707,11 @@ void Widget::setWindowClickThrough(bool clickThrough) {
     }
     SetWindowLong(hwnd, GWL_EXSTYLE, exStyle);
 #else
+#if defined(Q_OS_MACOS) || defined(Q_OS_MAC)
+    if (QWindow *w = windowHandle(); w != nullptr) {
+        w->setFlag(Qt::WindowTransparentForInput, clickThrough);
+    }
+#endif
     setAttribute(Qt::WA_TransparentForMouseEvents, clickThrough);
 #endif
 }
