@@ -13,4 +13,7 @@
         <file alias="lock">assets/icons/lock.svg</file>
         <file alias="unlock">assets/icons/unlock.svg</file>
     </qresource>
+    <qresource prefix="/app">
+        <file alias="tray_icon">assets/app-icon.png</file>
+    </qresource>
 </RCC>

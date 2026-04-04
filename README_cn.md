@@ -26,3 +26,13 @@
 ### 自定义构建
 - `Qt6.5.3+`
 - `C++17`
+
+#### Windows
+使用下面的命令进行Release构建
+```ps
+cmake -S . -B release
+cmake --build release --config Release
+# cmake --install release --config Release --prefix "./release"
+# cd ./release/bin
+windeployqt todolist.exe
+```

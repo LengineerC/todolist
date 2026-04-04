@@ -1,0 +1,36 @@
+#include <windows.h>
+
+IDI_APP_ICON ICON "assets/app-icon.ico"
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION 1,0,0,0
+ PRODUCTVERSION 1,0,0,0
+ FILEFLAGSMASK VS_FFI_FILEFLAGSMASK
+#ifdef _DEBUG
+ FILEFLAGS VS_FF_DEBUG
+#else
+ FILEFLAGS 0x0L
+#endif
+ FILEOS VOS__WINDOWS32
+ FILETYPE VFT_APP
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "080404B0"
+        BEGIN
+            VALUE "CompanyName", "LengineerC"
+            VALUE "FileDescription", "A simple todolist tool."
+            VALUE "FileVersion", "1.0.0.0"
+            VALUE "InternalName", "TodoList.exe"
+            VALUE "LegalCopyright", "Copyright (C) 2026 LengineerC. All rights reserved."
+            VALUE "OriginalFilename", "TodoList.exe"
+            VALUE "ProductName", "TodoList"
+            VALUE "ProductVersion", "1.0.0.0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x0804, 1200
+    END
+END

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDisplayName</key>
+    <string>TodoList</string>
+    <key>CFBundleExecutable</key>
+    <string>TodoList</string>
+    <key>CFBundleIdentifier</key>
+    <string>${MACOSX_BUNDLE_GUI_IDENTIFIER}</string>
+    <key>CFBundleIconFile</key>
+    <string>app-icon.icns</string>
+    <key>CFBundleName</key>
+    <string>TodoList</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0.0</string>
+    <key>CFBundleVersion</key>
+    <string>1.0.0</string>
+    <key>NSHumanReadableCopyright</key>
+    <string>Copyright (C) 2026 LengineerC. All rights reserved.</string>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+
+    <key>CompanyName</key>
+    <string>LengineerC</string>
+    <key>FileDescription</key>
+    <string>A simple todolist tool.</string>
+    <key>FileVersion</key>
+    <string>1.0.0.0</string>
+    <key>InternalName</key>
+    <string>TodoList</string>
+    <key>OriginalFilename</key>
+    <string>TodoList</string>
+    <key>ProductName</key>
+    <string>TodoList</string>
+    <key>ProductVersion</key>
+    <string>1.0.0.0</string>
+</dict>
+</plist>

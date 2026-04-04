@@ -7,16 +7,21 @@
 #include "todo_page.h"
 #include "utils.h"
 
+#include <QAction>
 #include <QApplication>
+#include <QCloseEvent>
 #include <QEvent>
 #include <QFontDatabase>
 #include <QFrame>
 #include <QHBoxLayout>
+#include <QIcon>
 #include <QJsonObject>
 #include <QLabel>
+#include <QMenu>
 #include <QPainter>
 #include <QPushButton>
 #include <QResizeEvent>
+#include <QSystemTrayIcon>
 
 #ifdef Q_OS_WIN
 #include <windows.h>
@@ -26,11 +31,21 @@
 Widget::Widget(QWidget *parent)
     : QWidget(parent), ui(new Ui::Widget), m_navGroup(nullptr),
       m_navLeftLayout(nullptr), m_themeSwitchBtn(nullptr), m_lockBtn(nullptr),
-      m_isLocked(false), m_hasRouteButton(false), m_lastSavedSize(0, 0),
-      m_lastSavedPos(0, 0) {
+      m_trayIcon(nullptr), m_trayMenu(nullptr), m_quitAction(nullptr),
+      m_forceQuit(false), m_trayAvailable(false), m_isLocked(false),
+      m_hasRouteButton(false), m_lastSavedSize(0, 0), m_lastSavedPos(0, 0) {
     setWindowFlags(Qt::FramelessWindowHint | Qt::Window |
                    Qt::CustomizeWindowHint);
     setWindowFlag(Qt::WindowMaximizeButtonHint, false);
+#ifdef Q_OS_WIN
+    HWND hwnd = reinterpret_cast<HWND>(winId());
+    LONG exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
+    exStyle |= WS_EX_TOOLWINDOW;
+    exStyle &= ~WS_EX_APPWINDOW;
+    SetWindowLong(hwnd, GWL_EXSTYLE, exStyle);
+    SetWindowPos(hwnd, nullptr, 0, 0, 0, 0,
+                 SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
+#endif
     setMinimumSize(Config::width, Config::height);
 
     m_resizeSaveTimer.setInterval(350);
@@ -70,6 +85,8 @@ Widget::Widget(QWidget *parent)
 
     m_lockHoverTimer.setInterval(50);
     connect(&m_lockHoverTimer, &QTimer::timeout, this, &Widget::checkLockHover);
+
+    initTray();
 }
 
 void Widget::setupRouter() {
@@ -235,6 +252,12 @@ QString Widget::currentRoute() const {
 
 void Widget::changeEvent(QEvent *event) {
     if (event->type() == QEvent::WindowStateChange) {
+        if (m_trayAvailable && isMinimized()) {
+            hideToTray();
+            event->accept();
+            return;
+        }
+
         if (isMaximized() || isFullScreen()) {
             showNormal();
         }
@@ -243,8 +266,18 @@ void Widget::changeEvent(QEvent *event) {
     QWidget::changeEvent(event);
 }
 
+void Widget::closeEvent(QCloseEvent *event) {
+    if (m_trayAvailable && !m_forceQuit) {
+        event->ignore();
+        hideToTray();
+        return;
+    }
+
+    event->accept();
+}
+
 bool Widget::nativeEvent(const QByteArray &eventType, void *message,
-                         long *result) {
+                         qintptr *result) {
 #ifdef Q_OS_WIN
     Q_UNUSED(eventType)
 
@@ -424,28 +457,6 @@ void Widget::onNavButtonClicked(QAbstractButton *button) {
 
 void Widget::toggleLockState() { setLocked(!m_isLocked); }
 
-// void Widget::setLocked(bool locked) {
-//     m_isLocked = locked;
-//     setWindowOpacity(m_isLocked ? Config::lockOpacity : 1.0);
-
-// #ifdef Q_OS_WIN
-//     setAttribute(Qt::WA_TransparentForMouseEvents, false);
-// #endif
-
-//     if (m_isLocked) {
-//         setMinimumSize(size());
-//         setMaximumSize(size());
-//     } else {
-//         setMinimumSize(Config::width, Config::height);
-//         setMaximumSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX);
-//     }
-
-//     if (m_lockBtn != nullptr) {
-//         m_lockBtn->raise();
-//     }
-//     applyThemeToNavigation();
-// }
-
 void Widget::setLocked(bool locked) {
     m_isLocked = locked;
     setWindowOpacity(m_isLocked ? Config::lockOpacity : 1.0);
@@ -453,15 +464,11 @@ void Widget::setLocked(bool locked) {
     if (m_isLocked) {
         setMinimumSize(size());
         setMaximumSize(size());
-
-        // --- 新增逻辑：开启穿透和轮询 ---
         setWindowClickThrough(true);
         m_lockHoverTimer.start();
     } else {
         setMinimumSize(Config::width, Config::height);
         setMaximumSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX);
-
-        // --- 新增逻辑：关闭穿透和轮询 ---
         setWindowClickThrough(false);
         m_lockHoverTimer.stop();
     }
@@ -606,8 +613,6 @@ void Widget::paintEvent(QPaintEvent *event) {
 
 void Widget::setWindowClickThrough(bool clickThrough) {
 #ifdef Q_OS_WIN
-    // 使用 Windows 原生 API 控制穿透，比 Qt 的 setAttribute
-    // 更底层、更可靠，不会引起界面闪烁
     HWND hwnd = reinterpret_cast<HWND>(winId());
     LONG exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
     if (clickThrough) {
@@ -617,9 +622,80 @@ void Widget::setWindowClickThrough(bool clickThrough) {
     }
     SetWindowLong(hwnd, GWL_EXSTYLE, exStyle);
 #else
-    // 兼容 Linux / macOS
     setAttribute(Qt::WA_TransparentForMouseEvents, clickThrough);
 #endif
+}
+
+void Widget::initTray() {
+    m_trayAvailable = QSystemTrayIcon::isSystemTrayAvailable();
+    if (!m_trayAvailable) {
+        return;
+    }
+
+    QApplication::setQuitOnLastWindowClosed(false);
+
+    m_trayIcon = new QSystemTrayIcon(this);
+    m_trayIcon->setIcon(QIcon(":/app/tray_icon"));
+    m_trayIcon->setToolTip("TodoList");
+
+    m_trayMenu = new QMenu(this);
+    m_quitAction = m_trayMenu->addAction("Exit");
+    connect(m_quitAction, &QAction::triggered, this, &Widget::quitFromTray);
+
+    m_trayIcon->setContextMenu(m_trayMenu);
+    connect(m_trayIcon, &QSystemTrayIcon::activated, this,
+            &Widget::onTrayActivated);
+    m_trayIcon->show();
+}
+
+void Widget::hideToTray() {
+    if (!m_trayAvailable) {
+        return;
+    }
+
+    if (m_isLocked) {
+        m_lockHoverTimer.stop();
+    }
+
+    hide();
+}
+
+void Widget::restoreFromTray() {
+    if (isVisible()) {
+        raise();
+        activateWindow();
+        return;
+    }
+
+    setWindowState(windowState() & ~Qt::WindowMinimized);
+    show();
+    raise();
+    activateWindow();
+
+    if (m_isLocked) {
+        m_lockHoverTimer.start();
+    }
+}
+
+void Widget::quitFromTray() {
+    m_forceQuit = true;
+    if (m_isLocked) {
+        m_lockHoverTimer.stop();
+        setWindowClickThrough(false);
+    }
+
+    if (m_trayIcon != nullptr) {
+        m_trayIcon->hide();
+    }
+
+    qApp->quit();
+}
+
+void Widget::onTrayActivated(QSystemTrayIcon::ActivationReason reason) {
+    if (reason == QSystemTrayIcon::Trigger ||
+        reason == QSystemTrayIcon::DoubleClick) {
+        restoreFromTray();
+    }
 }
 
 void Widget::checkLockHover() {

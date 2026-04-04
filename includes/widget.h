@@ -1,11 +1,14 @@
 #ifndef WIDGET_H
 #define WIDGET_H
 
+#include <QAction>
 #include <QAbstractButton>
 #include <QButtonGroup>
 #include <QByteArray>
+#include <QCloseEvent>
 #include <QHBoxLayout>
 #include <QMap>
+#include <QMenu>
 #include <QMoveEvent>
 #include <QPoint>
 #include <QPushButton>
@@ -13,6 +16,7 @@
 #include <QResizeEvent>
 #include <QSize>
 #include <QString>
+#include <QSystemTrayIcon>
 #include <QTimer>
 #include <QWidget>
 
@@ -37,8 +41,9 @@ class Widget : public QWidget {
   protected:
     void paintEvent(QPaintEvent *event);
     void changeEvent(QEvent *event) override;
+    void closeEvent(QCloseEvent *event) override;
     bool nativeEvent(const QByteArray &eventType, void *message,
-                     long *result) override;
+                     qintptr *result) override;
     void resizeEvent(QResizeEvent *event) override;
     void moveEvent(QMoveEvent *event) override;
     bool eventFilter(QObject *watched, QEvent *event) override;
@@ -46,6 +51,7 @@ class Widget : public QWidget {
   private slots:
     void onNavButtonClicked(QAbstractButton *button);
     void checkLockHover();
+    void onTrayActivated(QSystemTrayIcon::ActivationReason reason);
 
   private:
     void setupRouter();
@@ -56,8 +62,11 @@ class Widget : public QWidget {
     void toggleLockState();
     void setLocked(bool locked);
     QRect lockButtonRectInWidget() const;
-    QTimer m_lockHoverTimer;
     void setWindowClickThrough(bool clickThrough);
+    void initTray();
+    void hideToTray();
+    void restoreFromTray();
+    void quitFromTray();
 
     Ui::Widget *ui;
     QButtonGroup *m_navGroup;
@@ -66,8 +75,14 @@ class Widget : public QWidget {
     QHBoxLayout *m_navLeftLayout;
     QPushButton *m_themeSwitchBtn;
     QPushButton *m_lockBtn;
+    QSystemTrayIcon *m_trayIcon;
+    QMenu *m_trayMenu;
+    QAction *m_quitAction;
+    bool m_forceQuit;
+    bool m_trayAvailable;
     bool m_isLocked;
     bool m_hasRouteButton;
+    QTimer m_lockHoverTimer;
     QTimer m_resizeSaveTimer;
     QTimer m_moveSaveTimer;
     QSize m_lastSavedSize;

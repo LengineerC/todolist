@@ -31,6 +31,18 @@ set(PROJECT_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/resources.qrc"
 )
 
+if(WIN32)
+    list(APPEND PROJECT_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/app.rc")
+endif()
+
+if(APPLE)
+    set(MACOS_ICNS "${CMAKE_CURRENT_SOURCE_DIR}/assets/app-icon.icns")
+    list(APPEND PROJECT_SOURCES ${MACOS_ICNS})
+    set_source_files_properties(${MACOS_ICNS} PROPERTIES
+        MACOSX_PACKAGE_LOCATION "Resources"
+    )
+endif()
+
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
     qt_add_executable(todolist
         MANUAL_FINALIZATION
@@ -73,6 +85,13 @@ set_target_properties(todolist PROPERTIES
     MACOSX_BUNDLE TRUE
     WIN32_EXECUTABLE TRUE
 )
+
+if(APPLE)
+    set_target_properties(todolist PROPERTIES
+        MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/Info.plist.in"
+        MACOSX_BUNDLE_ICON_FILE "app-icon.icns"
+    )
+endif()
 
 include(GNUInstallDirs)
 install(TARGETS todolist
