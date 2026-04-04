@@ -1,5 +1,8 @@
+[简体中文](./README_cn.md)
+
 ## Qt TodoList
 A lightweight TodoList built with Qt6, featuring a countdown timer and theme switching.
+
 
 ### Usage
 #### Todo
@@ -55,13 +58,3 @@ Drag the top area of the window to move it. Resize from the window edges. After 
 ### Custom Build
 - `Qt6.5.3+`
 - `C++17`
-
-#### Windows
-Use the following commands for a Release build:
-```ps
-cmake -S . -B release
-cmake --build release --config Release
-# cmake --install release --config Release --prefix "./release"
-# cd ./release/bin
-windeployqt todolist.exe
-```

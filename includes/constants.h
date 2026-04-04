@@ -4,7 +4,7 @@
 
 namespace Config {
 inline const int width = 500;
-inline const int height = 600;
+inline const int height = 450;
 
 inline const double lockOpacity = 0.5;
 
