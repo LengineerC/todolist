@@ -10,5 +10,7 @@
         <file alias="undo">assets/icons/undo.svg</file>
         <file alias="sun">assets/icons/sun.svg</file>
         <file alias="moon">assets/icons/moon.svg</file>
+        <file alias="lock">assets/icons/lock.svg</file>
+        <file alias="unlock">assets/icons/unlock.svg</file>
     </qresource>
 </RCC>

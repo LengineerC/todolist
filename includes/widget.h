@@ -9,6 +9,7 @@
 #include <QMoveEvent>
 #include <QPoint>
 #include <QPushButton>
+#include <QRect>
 #include <QResizeEvent>
 #include <QSize>
 #include <QString>
@@ -40,9 +41,11 @@ class Widget : public QWidget {
                      long *result) override;
     void resizeEvent(QResizeEvent *event) override;
     void moveEvent(QMoveEvent *event) override;
+    bool eventFilter(QObject *watched, QEvent *event) override;
 
   private slots:
     void onNavButtonClicked(QAbstractButton *button);
+    void checkLockHover();
 
   private:
     void setupRouter();
@@ -50,6 +53,11 @@ class Widget : public QWidget {
     void applyTheme();
     void updateThemeSwitchButton();
     void applyThemeToNavigation();
+    void toggleLockState();
+    void setLocked(bool locked);
+    QRect lockButtonRectInWidget() const;
+    QTimer m_lockHoverTimer;
+    void setWindowClickThrough(bool clickThrough);
 
     Ui::Widget *ui;
     QButtonGroup *m_navGroup;
@@ -57,6 +65,8 @@ class Widget : public QWidget {
     QMap<QAbstractButton *, QString> m_buttonToRoute;
     QHBoxLayout *m_navLeftLayout;
     QPushButton *m_themeSwitchBtn;
+    QPushButton *m_lockBtn;
+    bool m_isLocked;
     bool m_hasRouteButton;
     QTimer m_resizeSaveTimer;
     QTimer m_moveSaveTimer;

@@ -7,6 +7,7 @@
 #include "todo_page.h"
 #include "utils.h"
 
+#include <QApplication>
 #include <QEvent>
 #include <QFontDatabase>
 #include <QFrame>
@@ -24,8 +25,9 @@
 
 Widget::Widget(QWidget *parent)
     : QWidget(parent), ui(new Ui::Widget), m_navGroup(nullptr),
-      m_navLeftLayout(nullptr), m_themeSwitchBtn(nullptr),
-      m_hasRouteButton(false), m_lastSavedSize(0, 0), m_lastSavedPos(0, 0) {
+      m_navLeftLayout(nullptr), m_themeSwitchBtn(nullptr), m_lockBtn(nullptr),
+      m_isLocked(false), m_hasRouteButton(false), m_lastSavedSize(0, 0),
+      m_lastSavedPos(0, 0) {
     setWindowFlags(Qt::FramelessWindowHint | Qt::Window |
                    Qt::CustomizeWindowHint);
     setWindowFlag(Qt::WindowMaximizeButtonHint, false);
@@ -65,6 +67,9 @@ Widget::Widget(QWidget *parent)
     registerPage("timer", "Timer", new RoutePage("Timer", this));
 
     switchToPage("todo");
+
+    m_lockHoverTimer.setInterval(50);
+    connect(&m_lockHoverTimer, &QTimer::timeout, this, &Widget::checkLockHover);
 }
 
 void Widget::setupRouter() {
@@ -83,10 +88,10 @@ void Widget::setupRouter() {
     m_themeSwitchBtn->setFlat(true);
     ui->navLayout->addWidget(m_themeSwitchBtn);
 
-    auto *lockBtn = new QPushButton(ui->navBar);
-    lockBtn->setFlat(true);
-    lockBtn->setProperty("navToolButton", true);
-    ui->navLayout->addWidget(lockBtn);
+    m_lockBtn = new QPushButton(ui->navBar);
+    m_lockBtn->setFlat(true);
+    m_lockBtn->setProperty("navToolButton", true);
+    ui->navLayout->addWidget(m_lockBtn);
 
     connect(m_themeSwitchBtn, &QPushButton::clicked, this, [this]() {
         QJsonObject config = ConfigManager::instance().getConfig();
@@ -96,11 +101,16 @@ void Widget::setupRouter() {
         applyTheme();
     });
 
+    connect(m_lockBtn, &QPushButton::clicked, this, &Widget::toggleLockState);
+
+    qApp->installEventFilter(this);
+
     connect(m_navGroup,
             static_cast<void (QButtonGroup::*)(QAbstractButton *)>(
                 &QButtonGroup::buttonClicked),
             this, &Widget::onNavButtonClicked);
 
+    setLocked(false);
     applyTheme();
 }
 
@@ -240,11 +250,23 @@ bool Widget::nativeEvent(const QByteArray &eventType, void *message,
 
     MSG *msg = static_cast<MSG *>(message);
     if (msg->message == WM_NCHITTEST) {
-        const LONG borderWidth = 8;
-        const LONG captionHeight = 44;
         const RECT winRect = {0, 0, width(), height()};
         const long x = GET_X_LPARAM(msg->lParam) - frameGeometry().x();
         const long y = GET_Y_LPARAM(msg->lParam) - frameGeometry().y();
+
+        if (m_isLocked) {
+            const QPoint localPoint(static_cast<int>(x), static_cast<int>(y));
+            if (lockButtonRectInWidget().contains(localPoint)) {
+                *result = HTCLIENT;
+                return true;
+            }
+
+            *result = HTTRANSPARENT;
+            return true;
+        }
+
+        const LONG borderWidth = 8;
+        const LONG captionHeight = 44;
 
         const bool resizeW = minimumWidth() != maximumWidth();
         const bool resizeH = minimumHeight() != maximumHeight();
@@ -310,6 +332,48 @@ bool Widget::nativeEvent(const QByteArray &eventType, void *message,
     return QWidget::nativeEvent(eventType, message, result);
 }
 
+bool Widget::eventFilter(QObject *watched, QEvent *event) {
+#ifdef Q_OS_WIN
+    Q_UNUSED(watched)
+    Q_UNUSED(event)
+    return QWidget::eventFilter(watched, event);
+#else
+    if (!m_isLocked || m_lockBtn == nullptr) {
+        return QWidget::eventFilter(watched, event);
+    }
+
+    auto *targetWidget = qobject_cast<QWidget *>(watched);
+    if (targetWidget == nullptr || targetWidget->window() != this) {
+        return QWidget::eventFilter(watched, event);
+    }
+
+    const QEvent::Type type = event->type();
+    const bool isBlockedType =
+        type == QEvent::MouseButtonPress ||
+        type == QEvent::MouseButtonRelease ||
+        type == QEvent::MouseButtonDblClick || type == QEvent::MouseMove ||
+        type == QEvent::Wheel || type == QEvent::ContextMenu ||
+        type == QEvent::TouchBegin || type == QEvent::TouchUpdate ||
+        type == QEvent::TouchEnd || type == QEvent::KeyPress ||
+        type == QEvent::KeyRelease || type == QEvent::ShortcutOverride;
+
+    if (!isBlockedType) {
+        return QWidget::eventFilter(watched, event);
+    }
+
+    QWidget *cursor = targetWidget;
+    while (cursor != nullptr) {
+        if (cursor == m_lockBtn) {
+            return QWidget::eventFilter(watched, event);
+        }
+        cursor = cursor->parentWidget();
+    }
+
+    event->accept();
+    return true;
+#endif
+}
+
 void Widget::resizeEvent(QResizeEvent *event) {
     QWidget::resizeEvent(event);
 
@@ -358,6 +422,65 @@ void Widget::onNavButtonClicked(QAbstractButton *button) {
     switchToPage(m_buttonToRoute.value(button));
 }
 
+void Widget::toggleLockState() { setLocked(!m_isLocked); }
+
+// void Widget::setLocked(bool locked) {
+//     m_isLocked = locked;
+//     setWindowOpacity(m_isLocked ? Config::lockOpacity : 1.0);
+
+// #ifdef Q_OS_WIN
+//     setAttribute(Qt::WA_TransparentForMouseEvents, false);
+// #endif
+
+//     if (m_isLocked) {
+//         setMinimumSize(size());
+//         setMaximumSize(size());
+//     } else {
+//         setMinimumSize(Config::width, Config::height);
+//         setMaximumSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX);
+//     }
+
+//     if (m_lockBtn != nullptr) {
+//         m_lockBtn->raise();
+//     }
+//     applyThemeToNavigation();
+// }
+
+void Widget::setLocked(bool locked) {
+    m_isLocked = locked;
+    setWindowOpacity(m_isLocked ? Config::lockOpacity : 1.0);
+
+    if (m_isLocked) {
+        setMinimumSize(size());
+        setMaximumSize(size());
+        
+        // --- 新增逻辑：开启穿透和轮询 ---
+        setWindowClickThrough(true);
+        m_lockHoverTimer.start();
+    } else {
+        setMinimumSize(Config::width, Config::height);
+        setMaximumSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX);
+        
+        // --- 新增逻辑：关闭穿透和轮询 ---
+        setWindowClickThrough(false);
+        m_lockHoverTimer.stop();
+    }
+
+    if (m_lockBtn != nullptr) {
+        m_lockBtn->raise();
+    }
+    applyThemeToNavigation();
+}
+
+QRect Widget::lockButtonRectInWidget() const {
+    if (m_lockBtn == nullptr) {
+        return QRect();
+    }
+
+    const QPoint topLeft = m_lockBtn->mapTo(this, QPoint(0, 0));
+    return QRect(topLeft, m_lockBtn->size());
+}
+
 void Widget::updateThemeSwitchButton() {
     if (m_themeSwitchBtn == nullptr) {
         return;
@@ -368,9 +491,8 @@ void Widget::updateThemeSwitchButton() {
     QColor iconColor = Config::Themes::getTheme(theme).textColor;
     iconColor.setAlpha(100);
 
-    m_themeSwitchBtn->setIcon(
-        Utils::getColoredSvg(theme == "light" ? ":/icons/moon" : ":/icons/sun",
-                             iconColor));
+    m_themeSwitchBtn->setIcon(Utils::getColoredSvg(
+        theme == "light" ? ":/icons/moon" : ":/icons/sun", iconColor));
     m_themeSwitchBtn->setIconSize(QSize(32, 32));
 }
 
@@ -424,8 +546,16 @@ void Widget::applyThemeToNavigation() {
         }
     }
 
-    const auto navToolButtons =
-        ui->navBar->findChildren<QPushButton *>(QString(), Qt::FindDirectChildrenOnly);
+    if (m_lockBtn != nullptr) {
+        QColor lockIconColor = textColor;
+        lockIconColor.setAlpha(m_isLocked ? 220 : 100);
+        m_lockBtn->setIcon(Utils::getColoredSvg(
+            m_isLocked ? ":/icons/unlock" : ":/icons/lock", lockIconColor));
+        m_lockBtn->setIconSize(QSize(20, 20));
+    }
+
+    const auto navToolButtons = ui->navBar->findChildren<QPushButton *>(
+        QString(), Qt::FindDirectChildrenOnly);
     for (auto *btn : navToolButtons) {
         if (btn != nullptr && btn->property("navToolButton").toBool()) {
             btn->setStyleSheet(
@@ -434,6 +564,10 @@ void Widget::applyThemeToNavigation() {
                         "QPushButton:hover { background: %1; }")
                     .arg(btnHoverColor));
         }
+    }
+
+    if (m_isLocked && m_lockBtn != nullptr) {
+        m_lockBtn->raise();
     }
 }
 
@@ -465,6 +599,41 @@ void Widget::paintEvent(QPaintEvent *event) {
             .backgroundColor);
     painter.setPen(Qt::NoPen);
     painter.drawRoundedRect(rect(), Config::borderRadius, Config::borderRadius);
+}
+
+
+void Widget::setWindowClickThrough(bool clickThrough) {
+#ifdef Q_OS_WIN
+    // 使用 Windows 原生 API 控制穿透，比 Qt 的 setAttribute 更底层、更可靠，不会引起界面闪烁
+    HWND hwnd = reinterpret_cast<HWND>(winId());
+    LONG exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
+    if (clickThrough) {
+        exStyle |= WS_EX_TRANSPARENT;
+    } else {
+        exStyle &= ~WS_EX_TRANSPARENT;
+    }
+    SetWindowLong(hwnd, GWL_EXSTYLE, exStyle);
+#else
+    // 兼容 Linux / macOS
+    setAttribute(Qt::WA_TransparentForMouseEvents, clickThrough);
+#endif
+}
+
+void Widget::checkLockHover() {
+    if (!m_isLocked || m_lockBtn == nullptr) return;
+
+    // 获取解锁按钮在屏幕上的全局真实坐标区域
+    QPoint btnGlobalPos = m_lockBtn->mapToGlobal(QPoint(0, 0));
+    QRect btnRect(btnGlobalPos, m_lockBtn->size());
+
+    // 检查全局鼠标是否在这个按钮区域内
+    if (btnRect.contains(QCursor::pos())) {
+        // 鼠标悬停在按钮上 -> 取消窗口穿透，让按钮可以被点击
+        setWindowClickThrough(false); 
+    } else {
+        // 鼠标移开 -> 恢复窗口全局穿透
+        setWindowClickThrough(true);  
+    }
 }
 
 Widget::~Widget() { delete ui; }
