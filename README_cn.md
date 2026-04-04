@@ -21,6 +21,8 @@
 
 `windowY`: 窗口y坐标
 
+`timerInitialSeconds`: Timer设置的时间
+
 ### 自定义构建
 - `Qt6.5.3+`
 - `C++17`

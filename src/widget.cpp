@@ -3,7 +3,7 @@
 #include "config_manager.h"
 #include "constants.h"
 #include "done_page.h"
-#include "route_page.h"
+#include "timer_page.h"
 #include "todo_page.h"
 #include "utils.h"
 
@@ -64,7 +64,7 @@ Widget::Widget(QWidget *parent)
 
     registerPage("todo", "Todo", new TodoPage(this));
     registerPage("done", "Done", new DonePage(this));
-    registerPage("timer", "Timer", new RoutePage("Timer", this));
+    registerPage("timer", "Timer", new TimerPage(this));
 
     switchToPage("todo");
 
@@ -453,14 +453,14 @@ void Widget::setLocked(bool locked) {
     if (m_isLocked) {
         setMinimumSize(size());
         setMaximumSize(size());
-        
+
         // --- 新增逻辑：开启穿透和轮询 ---
         setWindowClickThrough(true);
         m_lockHoverTimer.start();
     } else {
         setMinimumSize(Config::width, Config::height);
         setMaximumSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX);
-        
+
         // --- 新增逻辑：关闭穿透和轮询 ---
         setWindowClickThrough(false);
         m_lockHoverTimer.stop();
@@ -583,6 +583,9 @@ void Widget::applyTheme() {
         if (auto *donePage = qobject_cast<DonePage *>(page)) {
             donePage->applyTheme();
         }
+        if (auto *timerPage = qobject_cast<TimerPage *>(page)) {
+            timerPage->applyTheme();
+        }
     }
 
     update();
@@ -601,10 +604,10 @@ void Widget::paintEvent(QPaintEvent *event) {
     painter.drawRoundedRect(rect(), Config::borderRadius, Config::borderRadius);
 }
 
-
 void Widget::setWindowClickThrough(bool clickThrough) {
 #ifdef Q_OS_WIN
-    // 使用 Windows 原生 API 控制穿透，比 Qt 的 setAttribute 更底层、更可靠，不会引起界面闪烁
+    // 使用 Windows 原生 API 控制穿透，比 Qt 的 setAttribute
+    // 更底层、更可靠，不会引起界面闪烁
     HWND hwnd = reinterpret_cast<HWND>(winId());
     LONG exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
     if (clickThrough) {
@@ -620,7 +623,8 @@ void Widget::setWindowClickThrough(bool clickThrough) {
 }
 
 void Widget::checkLockHover() {
-    if (!m_isLocked || m_lockBtn == nullptr) return;
+    if (!m_isLocked || m_lockBtn == nullptr)
+        return;
 
     // 获取解锁按钮在屏幕上的全局真实坐标区域
     QPoint btnGlobalPos = m_lockBtn->mapToGlobal(QPoint(0, 0));
@@ -629,10 +633,10 @@ void Widget::checkLockHover() {
     // 检查全局鼠标是否在这个按钮区域内
     if (btnRect.contains(QCursor::pos())) {
         // 鼠标悬停在按钮上 -> 取消窗口穿透，让按钮可以被点击
-        setWindowClickThrough(false); 
+        setWindowClickThrough(false);
     } else {
         // 鼠标移开 -> 恢复窗口全局穿透
-        setWindowClickThrough(true);  
+        setWindowClickThrough(true);
     }
 }
 

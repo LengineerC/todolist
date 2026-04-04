@@ -21,6 +21,7 @@ QJsonObject ConfigManager::getDefaultConfig() {
     defaultConfig["windowHeight"] = Config::height;
     defaultConfig["windowX"] = QJsonValue(QJsonValue::Null);
     defaultConfig["windowY"] = QJsonValue(QJsonValue::Null);
+    defaultConfig["timerInitialSeconds"] = 1500;
 
     return defaultConfig;
 }
