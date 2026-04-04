@@ -22,6 +22,7 @@
 #include <QPushButton>
 #include <QResizeEvent>
 #include <QSystemTrayIcon>
+#include <QWindow>
 
 #ifdef Q_OS_WIN
 #include <windows.h>
@@ -37,15 +38,7 @@ Widget::Widget(QWidget *parent)
     setWindowFlags(Qt::FramelessWindowHint | Qt::Window |
                    Qt::CustomizeWindowHint);
     setWindowFlag(Qt::WindowMaximizeButtonHint, false);
-#ifdef Q_OS_WIN
-    HWND hwnd = reinterpret_cast<HWND>(winId());
-    LONG exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
-    exStyle |= WS_EX_TOOLWINDOW;
-    exStyle &= ~WS_EX_APPWINDOW;
-    SetWindowLong(hwnd, GWL_EXSTYLE, exStyle);
-    SetWindowPos(hwnd, nullptr, 0, 0, 0, 0,
-                 SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
-#endif
+    setAttribute(Qt::WA_TranslucentBackground);
     setMinimumSize(Config::width, Config::height);
 
     m_resizeSaveTimer.setInterval(350);
@@ -57,7 +50,6 @@ Widget::Widget(QWidget *parent)
     m_moveSaveTimer.setSingleShot(true);
     connect(&m_moveSaveTimer, &QTimer::timeout, this,
             &Widget::persistWindowGeometry);
-    setAttribute(Qt::WA_TranslucentBackground);
 
     ui->setupUi(this);
 
@@ -87,6 +79,16 @@ Widget::Widget(QWidget *parent)
     connect(&m_lockHoverTimer, &QTimer::timeout, this, &Widget::checkLockHover);
 
     initTray();
+
+#ifdef Q_OS_WIN
+    HWND hwnd = reinterpret_cast<HWND>(winId());
+    LONG exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
+    exStyle |= WS_EX_TOOLWINDOW;
+    exStyle &= ~WS_EX_APPWINDOW;
+    SetWindowLong(hwnd, GWL_EXSTYLE, exStyle);
+    SetWindowPos(hwnd, nullptr, 0, 0, 0, 0,
+                 SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
+#endif
 }
 
 void Widget::setupRouter() {
@@ -276,20 +278,37 @@ void Widget::closeEvent(QCloseEvent *event) {
     event->accept();
 }
 
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 bool Widget::nativeEvent(const QByteArray &eventType, void *message,
                          qintptr *result) {
+#else
+bool Widget::nativeEvent(const QByteArray &eventType, void *message,
+                         long *result) {
+#endif
 #ifdef Q_OS_WIN
     Q_UNUSED(eventType)
 
     MSG *msg = static_cast<MSG *>(message);
     if (msg->message == WM_NCHITTEST) {
-        const RECT winRect = {0, 0, width(), height()};
-        const long x = GET_X_LPARAM(msg->lParam) - frameGeometry().x();
-        const long y = GET_Y_LPARAM(msg->lParam) - frameGeometry().y();
+        const POINT cursorPos = {GET_X_LPARAM(msg->lParam),
+                                 GET_Y_LPARAM(msg->lParam)};
+        RECT clientRect = {};
+        HWND hwnd = reinterpret_cast<HWND>(winId());
+        GetClientRect(hwnd, &clientRect);
+
+        POINT clientPos = cursorPos;
+        ScreenToClient(hwnd, &clientPos);
+
+        const long x = clientPos.x;
+        const long y = clientPos.y;
+        const long clientWidth = clientRect.right - clientRect.left;
+        const long clientHeight = clientRect.bottom - clientRect.top;
 
         if (m_isLocked) {
-            const QPoint localPoint(static_cast<int>(x), static_cast<int>(y));
-            if (lockButtonRectInWidget().contains(localPoint)) {
+            const QRect unlockRect =
+                lockButtonRectInWidget().adjusted(-8, -8, 8, 8);
+            if (unlockRect.contains(
+                    QPoint(static_cast<int>(x), static_cast<int>(y)))) {
                 *result = HTCLIENT;
                 return true;
             }
@@ -299,57 +318,57 @@ bool Widget::nativeEvent(const QByteArray &eventType, void *message,
         }
 
         const LONG borderWidth = 8;
-        const LONG captionHeight = 44;
+        const LONG captionHeight =
+            qMax<LONG>(36, static_cast<LONG>(ui->navBar->height() + 8));
 
         const bool resizeW = minimumWidth() != maximumWidth();
         const bool resizeH = minimumHeight() != maximumHeight();
 
         if (resizeW && resizeH) {
-            if (x < winRect.left + borderWidth &&
-                y < winRect.top + borderWidth) {
+            if (x >= 0 && x < borderWidth && y >= 0 && y < borderWidth) {
                 *result = HTTOPLEFT;
                 return true;
             }
-            if (x >= winRect.right - borderWidth &&
-                y < winRect.top + borderWidth) {
+            if (x < clientWidth && x >= clientWidth - borderWidth && y >= 0 &&
+                y < borderWidth) {
                 *result = HTTOPRIGHT;
                 return true;
             }
-            if (x < winRect.left + borderWidth &&
-                y >= winRect.bottom - borderWidth) {
+            if (x >= 0 && x < borderWidth && y < clientHeight &&
+                y >= clientHeight - borderWidth) {
                 *result = HTBOTTOMLEFT;
                 return true;
             }
-            if (x >= winRect.right - borderWidth &&
-                y >= winRect.bottom - borderWidth) {
+            if (x < clientWidth && x >= clientWidth - borderWidth &&
+                y < clientHeight && y >= clientHeight - borderWidth) {
                 *result = HTBOTTOMRIGHT;
                 return true;
             }
         }
 
         if (resizeW) {
-            if (x < winRect.left + borderWidth) {
+            if (x >= 0 && x < borderWidth) {
                 *result = HTLEFT;
                 return true;
             }
-            if (x >= winRect.right - borderWidth) {
+            if (x < clientWidth && x >= clientWidth - borderWidth) {
                 *result = HTRIGHT;
                 return true;
             }
         }
 
         if (resizeH) {
-            if (y < winRect.top + borderWidth) {
+            if (y >= 0 && y < borderWidth) {
                 *result = HTTOP;
                 return true;
             }
-            if (y >= winRect.bottom - borderWidth) {
+            if (y < clientHeight && y >= clientHeight - borderWidth) {
                 *result = HTBOTTOM;
                 return true;
             }
         }
 
-        if (y >= winRect.top + borderWidth && y < winRect.top + captionHeight) {
+        if (y >= borderWidth && y < captionHeight) {
             QWidget *hitWidget =
                 childAt(static_cast<int>(x), static_cast<int>(y));
             if (hitWidget == nullptr ||
@@ -558,7 +577,7 @@ void Widget::applyThemeToNavigation() {
         lockIconColor.setAlpha(m_isLocked ? 220 : 100);
         m_lockBtn->setIcon(Utils::getColoredSvg(
             m_isLocked ? ":/icons/unlock" : ":/icons/lock", lockIconColor));
-        m_lockBtn->setIconSize(QSize(20, 20));
+        m_lockBtn->setIconSize(QSize(32, 32));
     }
 
     const auto navToolButtons = ui->navBar->findChildren<QPushButton *>(
@@ -702,16 +721,12 @@ void Widget::checkLockHover() {
     if (!m_isLocked || m_lockBtn == nullptr)
         return;
 
-    // 获取解锁按钮在屏幕上的全局真实坐标区域
-    QPoint btnGlobalPos = m_lockBtn->mapToGlobal(QPoint(0, 0));
-    QRect btnRect(btnGlobalPos, m_lockBtn->size());
+    const QRect btnRect = lockButtonRectInWidget().adjusted(-8, -8, 8, 8);
+    const QPoint cursorInWidget = mapFromGlobal(QCursor::pos());
 
-    // 检查全局鼠标是否在这个按钮区域内
-    if (btnRect.contains(QCursor::pos())) {
-        // 鼠标悬停在按钮上 -> 取消窗口穿透，让按钮可以被点击
+    if (btnRect.contains(cursorInWidget)) {
         setWindowClickThrough(false);
     } else {
-        // 鼠标移开 -> 恢复窗口全局穿透
         setWindowClickThrough(true);
     }
 }

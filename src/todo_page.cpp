@@ -27,6 +27,42 @@ constexpr int kMoveAnimMs = 140;
 constexpr int kAutoScrollEdgePx = 36;
 constexpr int kAutoScrollStepPx = 10;
 constexpr int kAutoScrollIntervalMs = 16;
+
+bool forceWrapEnabledForTodo() {
+    const QString wrapMode =
+        ConfigManager::instance().getConfig()["todoWrapMode"].toString("force");
+    return wrapMode != "word";
+}
+
+QString formatDragProxyText(const QString &text, const QFontMetrics &fm,
+                            int maxWidth, bool forceWrap) {
+    if (text.isEmpty() || !forceWrap) {
+        return text;
+    }
+
+    QString result;
+    result.reserve(text.size() + text.size() / 16);
+
+    int runWidth = 0;
+    for (const QChar ch : text) {
+        if (ch == '\n') {
+            result.append(ch);
+            runWidth = 0;
+            continue;
+        }
+
+        const int charWidth = fm.horizontalAdvance(ch);
+        if (runWidth > 0 && runWidth + charWidth > maxWidth) {
+            result.append('\n');
+            runWidth = 0;
+        }
+
+        result.append(ch);
+        runWidth += charWidth;
+    }
+
+    return result;
+}
 } // namespace
 
 TodoPage::TodoPage(QWidget *parent)
@@ -465,20 +501,23 @@ void TodoPage::beginDrag(TodoItemWidget *item, const QPoint &globalPos) {
     m_lastDragGlobalPos = globalPos;
 
     const int dragWidth = item->width();
-    m_dragProxy->setText(item->text());
-    m_dragProxy->setFixedWidth(dragWidth);
-
-    const QString wrapMode =
-        ConfigManager::instance().getConfig()["todoWrapMode"].toString("force");
+    const bool forceWrap = forceWrapEnabledForTodo();
+    const int textWidth = qMax(1, dragWidth - 24);
     int wrapFlags = Qt::TextWordWrap | Qt::AlignLeft | Qt::AlignTop;
-    if (wrapMode != "word") {
+    if (forceWrap) {
         wrapFlags |= Qt::TextWrapAnywhere;
     }
 
     QFontMetrics fm(m_dragProxy->font());
+    const QString proxyText =
+        formatDragProxyText(item->text(), fm, textWidth, forceWrap);
+
+    m_dragProxy->setText(proxyText);
+    m_dragProxy->setFixedWidth(dragWidth);
+    m_dragProxy->setWordWrap(true);
+
     const QRect textRect =
-        fm.boundingRect(QRect(0, 0, qMax(1, dragWidth - 24), 100000),
-                        wrapFlags, item->text());
+        fm.boundingRect(QRect(0, 0, textWidth, 100000), wrapFlags, proxyText);
     const int proxyHeight = qMax(kItemMinHeight, textRect.height() + 20);
     m_dragProxy->setFixedHeight(proxyHeight);
     m_dragProxy->show();

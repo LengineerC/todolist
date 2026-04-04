@@ -5,10 +5,11 @@
 #include <QApplication>
 #include <QFont>
 #include <QFontDatabase>
+#include <QGuiApplication>
 
 int main(int argc, char *argv[]) {
     QGuiApplication::setHighDpiScaleFactorRoundingPolicy(
-        Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
+        Qt::HighDpiScaleFactorRoundingPolicy::Floor);
     QApplication a(argc, argv);
 
     ConfigManager::instance().readConfigJson();

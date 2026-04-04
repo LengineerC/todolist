@@ -19,6 +19,7 @@
 #include <QSystemTrayIcon>
 #include <QTimer>
 #include <QWidget>
+#include <QtGlobal>
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -42,8 +43,13 @@ class Widget : public QWidget {
     void paintEvent(QPaintEvent *event);
     void changeEvent(QEvent *event) override;
     void closeEvent(QCloseEvent *event) override;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     bool nativeEvent(const QByteArray &eventType, void *message,
                      qintptr *result) override;
+#else
+    bool nativeEvent(const QByteArray &eventType, void *message,
+                     long *result) override;
+#endif
     void resizeEvent(QResizeEvent *event) override;
     void moveEvent(QMoveEvent *event) override;
     bool eventFilter(QObject *watched, QEvent *event) override;
