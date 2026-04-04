@@ -9,11 +9,11 @@
 #include <QFrame>
 #include <QGraphicsOpacityEffect>
 #include <QHBoxLayout>
+#include <QHash>
 #include <QLabel>
 #include <QPropertyAnimation>
-#include <QVBoxLayout>
-#include <QHash>
 #include <QResizeEvent>
+#include <QVBoxLayout>
 
 namespace {
 constexpr int kTopRowHeight = 46;
@@ -63,21 +63,19 @@ void DonePage::applyTheme() {
 
     m_clearAllButton->setIcon(Utils::getColoredSvg(
         ":/icons/delete", QColor(baseTextColor.red(), baseTextColor.green(),
-                                  baseTextColor.blue(), 100)));
+                                 baseTextColor.blue(), 100)));
 
-    const QString hoverColor =
-        Utils::colorToRgba(Config::Themes::getReverseTheme(theme).backgroundColor,
-                           100);
-    m_clearAllButton->setStyleSheet(
-        QString("QPushButton {"
-                " background: transparent;"
-                " border-radius: 8px;"
-                "}"
-                "QPushButton:hover {"
-                " background: %1;"
-                " border-color: rgba(0, 0, 0, 130);"
-                "}")
-            .arg(hoverColor));
+    const QString hoverColor = Utils::colorToRgba(
+        Config::Themes::getReverseTheme(theme).backgroundColor, 100);
+    m_clearAllButton->setStyleSheet(QString("QPushButton {"
+                                            " background: transparent;"
+                                            " border-radius: 8px;"
+                                            "}"
+                                            "QPushButton:hover {"
+                                            " background: %1;"
+                                            " border-color: rgba(0, 0, 0, 130);"
+                                            "}")
+                                        .arg(hoverColor));
 
     reloadData();
     update();
@@ -99,22 +97,23 @@ void DonePage::setupUi() {
         100);
 
     m_clearAllButton = new QPushButton(this);
+    m_clearAllButton->setIconSize(QSize(28, 28));
     m_clearAllButton->setCursor(Qt::PointingHandCursor);
     m_clearAllButton->setFixedHeight(kTopRowHeight);
     m_clearAllButton->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     m_clearAllButton->setIcon(Utils::getColoredSvg(
         ":/icons/delete", QColor(baseTextColor.red(), baseTextColor.green(),
-                                  baseTextColor.blue(), 100)));
-    m_clearAllButton->setStyleSheet(
-        QString("QPushButton {"
-                " background: transparent;"
-                " border-radius: 8px;"
-                "}"
-                "QPushButton:hover {"
-                " background: %1;"
-                " border-color: rgba(0, 0, 0, 130);"
-                "}")
-            .arg(hoverColor));
+                                 baseTextColor.blue(), 100)));
+
+    m_clearAllButton->setStyleSheet(QString("QPushButton {"
+                                            " background: transparent;"
+                                            " border-radius: 8px;"
+                                            "}"
+                                            "QPushButton:hover {"
+                                            " background: %1;"
+                                            " border-color: rgba(0, 0, 0, 130);"
+                                            "}")
+                                        .arg(hoverColor));
     rootLayout->addWidget(m_clearAllButton);
 
     m_scrollArea = new QScrollArea(this);
@@ -201,42 +200,38 @@ QWidget *DonePage::buildDoneItemRow(qint64 id, const QString &content) {
     restoreButton->setFixedSize(kActionButtonSize, kActionButtonSize);
     restoreButton->setIcon(Utils::getColoredSvg(
         ":/icons/undo", QColor(baseTextColor.red(), baseTextColor.green(),
-                                baseTextColor.blue(), 100)));
-    restoreButton->setStyleSheet(
-        QString("QPushButton {"
-                " background: transparent;"
-                " border-radius: 4px;"
-                " padding: 4px;"
-                "}"
-                "QPushButton:hover {"
-                " background: %1;"
-                "}")
-            .arg(hoverColor));
+                               baseTextColor.blue(), 100)));
+    restoreButton->setStyleSheet(QString("QPushButton {"
+                                         " background: transparent;"
+                                         " border-radius: 4px;"
+                                         " padding: 4px;"
+                                         "}"
+                                         "QPushButton:hover {"
+                                         " background: %1;"
+                                         "}")
+                                     .arg(hoverColor));
 
     auto *deleteButton = new QPushButton(row);
     deleteButton->setCursor(Qt::PointingHandCursor);
     deleteButton->setFixedSize(kActionButtonSize, kActionButtonSize);
     deleteButton->setIcon(Utils::getColoredSvg(
         ":/icons/close", QColor(baseTextColor.red(), baseTextColor.green(),
-                                  baseTextColor.blue(), 100)));
-    deleteButton->setStyleSheet(
-        QString("QPushButton {"
-                " background: transparent;"
-                " border-radius: 4px;"
-                " padding: 4px;"
-                "}"
-                "QPushButton:hover {"
-                " background: %1;"
-                "}")
-            .arg(hoverColor));
+                                baseTextColor.blue(), 100)));
+    deleteButton->setStyleSheet(QString("QPushButton {"
+                                        " background: transparent;"
+                                        " border-radius: 4px;"
+                                        " padding: 4px;"
+                                        "}"
+                                        "QPushButton:hover {"
+                                        " background: %1;"
+                                        "}")
+                                    .arg(hoverColor));
 
-    connect(restoreButton, &QPushButton::clicked, this, [this, row, id]() {
-        removeDoneItemWithFade(row, id, true);
-    });
+    connect(restoreButton, &QPushButton::clicked, this,
+            [this, row, id]() { removeDoneItemWithFade(row, id, true); });
 
-    connect(deleteButton, &QPushButton::clicked, this, [this, row, id]() {
-        removeDoneItemWithFade(row, id, false);
-    });
+    connect(deleteButton, &QPushButton::clicked, this,
+            [this, row, id]() { removeDoneItemWithFade(row, id, false); });
 
     rowLayout->addWidget(contentLabel, 1);
     rowLayout->addWidget(restoreButton, 0, Qt::AlignCenter);
@@ -256,7 +251,8 @@ void DonePage::removeDoneItemWithFade(QWidget *row, qint64 id, bool restore) {
         row->setGraphicsEffect(effect);
     }
 
-    auto *effect = qobject_cast<QGraphicsOpacityEffect *>(row->graphicsEffect());
+    auto *effect =
+        qobject_cast<QGraphicsOpacityEffect *>(row->graphicsEffect());
     if (effect == nullptr) {
         return;
     }
@@ -287,7 +283,8 @@ void DonePage::reloadData() {
         delete item;
     }
 
-    const QVector<TodoRecord> completed = DbManager::instance().loadCompletedTodos();
+    const QVector<TodoRecord> completed =
+        DbManager::instance().loadCompletedTodos();
 
     QHash<QString, QVector<TodoRecord>> groups;
     QVector<QString> dateOrder;
