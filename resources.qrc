@@ -8,5 +8,7 @@
         <file alias="close">assets/icons/close.svg</file>
         <file alias="delete">assets/icons/delete.svg</file>
         <file alias="undo">assets/icons/undo.svg</file>
+        <file alias="sun">assets/icons/sun.svg</file>
+        <file alias="moon">assets/icons/moon.svg</file>
     </qresource>
 </RCC>

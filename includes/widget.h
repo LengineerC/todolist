@@ -8,6 +8,7 @@
 #include <QMap>
 #include <QMoveEvent>
 #include <QPoint>
+#include <QPushButton>
 #include <QResizeEvent>
 #include <QSize>
 #include <QString>
@@ -46,12 +47,16 @@ class Widget : public QWidget {
   private:
     void setupRouter();
     void persistWindowGeometry();
+    void applyTheme();
+    void updateThemeSwitchButton();
+    void applyThemeToNavigation();
 
     Ui::Widget *ui;
     QButtonGroup *m_navGroup;
     QMap<QString, int> m_routeToIndex;
     QMap<QAbstractButton *, QString> m_buttonToRoute;
     QHBoxLayout *m_navLeftLayout;
+    QPushButton *m_themeSwitchBtn;
     bool m_hasRouteButton;
     QTimer m_resizeSaveTimer;
     QTimer m_moveSaveTimer;

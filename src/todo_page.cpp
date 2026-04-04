@@ -244,6 +244,79 @@ void TodoPage::refreshData() {
     rebuildListLayout(false);
 }
 
+void TodoPage::applyTheme() {
+    const QString theme =
+        ConfigManager::instance().getConfig()["theme"].toString("light");
+    const QColor baseTextColor = Config::Themes::getTheme(theme).textColor;
+
+    QColor iconColor = baseTextColor;
+    iconColor.setAlpha(100);
+    m_addArea->setIcon(Utils::getColoredSvg(":/icons/add", iconColor));
+    m_addCancelButton->setIcon(Utils::getColoredSvg(":/icons/close", iconColor));
+
+    const QString hoverColor =
+        Utils::colorToRgba(Config::Themes::getReverseTheme(theme).backgroundColor,
+                           100);
+    m_addArea->setStyleSheet(QString("QPushButton {"
+                                     " background: transparent;"
+                                     " border-radius: 8px;"
+                                     "}"
+                                     "QPushButton:hover {"
+                                     " background: %1;"
+                                     " border-color: rgba(0, 0, 0, 130);"
+                                     "}")
+                                 .arg(hoverColor));
+    m_addCancelButton->setStyleSheet(
+        QString("QPushButton {"
+                " background: transparent;"
+                " border-radius: 2px;"
+                " height: 100%;"
+                "}"
+                "QPushButton:hover {"
+                " background: %1;"
+                "}")
+            .arg(hoverColor));
+
+    const QString inputTextColor =
+        Utils::colorToRgba(Config::Themes::getTheme(theme).textColor, 255);
+    m_addLineEdit->setStyleSheet(
+        QString("QLineEdit {"
+                " color: %1;"
+                " height: 100%;"
+                " background: transparent;"
+                " border: none;"
+                "}")
+            .arg(inputTextColor));
+
+    const QString proxyBgColor =
+        Utils::colorToRgba(Config::Themes::getTheme(theme).backgroundColor, 20);
+    const QString proxyTextColor =
+        Utils::colorToRgba(Config::Themes::getTheme(theme).textColor, 150);
+    const QString proxyBorderColor =
+        Utils::colorToRgba(Config::Themes::getReverseTheme(theme).backgroundColor,
+                           100);
+    m_dragProxy->setStyleSheet(QString("background-color: %1;"
+                                       "border: 2px solid %3;"
+                                       "border-radius: 8px;"
+                                       "padding: 5px 12px;"
+                                       "color: %2;")
+                                   .arg(proxyBgColor, proxyTextColor,
+                                        proxyBorderColor));
+
+    for (auto *item : m_items) {
+        if (item != nullptr) {
+            item->applyTheme();
+        }
+    }
+
+    if (m_placeholderItem != nullptr) {
+        m_placeholderItem->applyTheme();
+        m_placeholderItem->setStyleSheet("background: transparent; border: none;");
+    }
+
+    update();
+}
+
 void TodoPage::onItemLongPressStarted(TodoItemWidget *item,
                                       const QPoint &globalPos) {
     if (m_addInlineActive || anyInlineEditing()) {

@@ -24,8 +24,8 @@
 
 Widget::Widget(QWidget *parent)
     : QWidget(parent), ui(new Ui::Widget), m_navGroup(nullptr),
-      m_navLeftLayout(nullptr), m_hasRouteButton(false), m_lastSavedSize(0, 0),
-      m_lastSavedPos(0, 0) {
+      m_navLeftLayout(nullptr), m_themeSwitchBtn(nullptr),
+      m_hasRouteButton(false), m_lastSavedSize(0, 0), m_lastSavedPos(0, 0) {
     setWindowFlags(Qt::FramelessWindowHint | Qt::Window |
                    Qt::CustomizeWindowHint);
     setWindowFlag(Qt::WindowMaximizeButtonHint, false);
@@ -45,10 +45,10 @@ Widget::Widget(QWidget *parent)
     ui->setupUi(this);
 
     const QJsonObject config = ConfigManager::instance().getConfig();
-    const int restoredWidth = qMax(Config::width,
-                                   config["windowWidth"].toInt(Config::width));
-    const int restoredHeight = qMax(
-        Config::height, config["windowHeight"].toInt(Config::height));
+    const int restoredWidth =
+        qMax(Config::width, config["windowWidth"].toInt(Config::width));
+    const int restoredHeight =
+        qMax(Config::height, config["windowHeight"].toInt(Config::height));
     resize(restoredWidth, restoredHeight);
 
     if (!config["windowX"].isNull() && !config["windowY"].isNull()) {
@@ -79,25 +79,29 @@ void Widget::setupRouter() {
     ui->navLayout->addWidget(leftContainer);
     ui->navLayout->addStretch(1);
 
-    auto *placeholder1 = new QPushButton("t1", ui->navBar);
-    auto *placeholder2 = new QPushButton("t2", ui->navBar);
-    placeholder1->setFlat(true);
-    placeholder2->setFlat(true);
-    placeholder1->setStyleSheet(
-        "QPushButton { background: transparent; border: none; color: "
-        "rgba(0,0,0,140); }"
-        "QPushButton:hover { color: rgba(0,0,0,220); }");
-    placeholder2->setStyleSheet(
-        "QPushButton { background: transparent; border: none; color: "
-        "rgba(0,0,0,140); }"
-        "QPushButton:hover { color: rgba(0,0,0,220); }");
-    ui->navLayout->addWidget(placeholder1);
-    ui->navLayout->addWidget(placeholder2);
+    m_themeSwitchBtn = new QPushButton(ui->navBar);
+    m_themeSwitchBtn->setFlat(true);
+    ui->navLayout->addWidget(m_themeSwitchBtn);
+
+    auto *lockBtn = new QPushButton(ui->navBar);
+    lockBtn->setFlat(true);
+    lockBtn->setProperty("navToolButton", true);
+    ui->navLayout->addWidget(lockBtn);
+
+    connect(m_themeSwitchBtn, &QPushButton::clicked, this, [this]() {
+        QJsonObject config = ConfigManager::instance().getConfig();
+        const QString currentTheme = config["theme"].toString("light");
+        config["theme"] = (currentTheme == "light") ? "dark" : "light";
+        ConfigManager::instance().writeConfigJson(config);
+        applyTheme();
+    });
 
     connect(m_navGroup,
             static_cast<void (QButtonGroup::*)(QAbstractButton *)>(
                 &QButtonGroup::buttonClicked),
             this, &Widget::onNavButtonClicked);
+
+    applyTheme();
 }
 
 void Widget::registerPage(const QString &routeKey, const QString &title,
@@ -146,7 +150,7 @@ void Widget::registerPage(const QString &routeKey, const QString &title,
                                   " background: transparent;"
                                   " min-width: 77px;"
                                   " border: none;"
-                                //   " border: 1px solid #000;"
+                                  //   " border: 1px solid #000;"
                                   " padding: 2px 0px;"
                                   " text-align: center;"
                                   " color: %1;"
@@ -165,8 +169,9 @@ void Widget::registerPage(const QString &routeKey, const QString &title,
 
     if (m_hasRouteButton) {
         auto *separator = new QLabel("|", this);
-        separator->setStyleSheet(QString("color: %1; padding: 0 2px; font-weight: 900;")
-                                     .arg(Utils::colorToRgba(textColor, 200)));
+        separator->setStyleSheet(
+            QString("color: %1; padding: 0 2px; font-weight: 900;")
+                .arg(Utils::colorToRgba(textColor, 200)));
         if (!heavyFamily.isEmpty()) {
             QFont sepFont = separator->font();
             sepFont.setFamily(heavyFamily);
@@ -189,10 +194,12 @@ bool Widget::switchToPage(const QString &routeKey) {
     const int index = m_routeToIndex.value(routeKey);
     ui->stackPages->setCurrentIndex(index);
 
-    if (auto *todoPage = qobject_cast<TodoPage *>(ui->stackPages->widget(index))) {
+    if (auto *todoPage =
+            qobject_cast<TodoPage *>(ui->stackPages->widget(index))) {
         todoPage->refreshData();
     }
-    if (auto *donePage = qobject_cast<DonePage *>(ui->stackPages->widget(index))) {
+    if (auto *donePage =
+            qobject_cast<DonePage *>(ui->stackPages->widget(index))) {
         donePage->refreshData();
     }
 
@@ -243,15 +250,18 @@ bool Widget::nativeEvent(const QByteArray &eventType, void *message,
         const bool resizeH = minimumHeight() != maximumHeight();
 
         if (resizeW && resizeH) {
-            if (x < winRect.left + borderWidth && y < winRect.top + borderWidth) {
+            if (x < winRect.left + borderWidth &&
+                y < winRect.top + borderWidth) {
                 *result = HTTOPLEFT;
                 return true;
             }
-            if (x >= winRect.right - borderWidth && y < winRect.top + borderWidth) {
+            if (x >= winRect.right - borderWidth &&
+                y < winRect.top + borderWidth) {
                 *result = HTTOPRIGHT;
                 return true;
             }
-            if (x < winRect.left + borderWidth && y >= winRect.bottom - borderWidth) {
+            if (x < winRect.left + borderWidth &&
+                y >= winRect.bottom - borderWidth) {
                 *result = HTBOTTOMLEFT;
                 return true;
             }
@@ -285,7 +295,8 @@ bool Widget::nativeEvent(const QByteArray &eventType, void *message,
         }
 
         if (y >= winRect.top + borderWidth && y < winRect.top + captionHeight) {
-            QWidget *hitWidget = childAt(static_cast<int>(x), static_cast<int>(y));
+            QWidget *hitWidget =
+                childAt(static_cast<int>(x), static_cast<int>(y));
             if (hitWidget == nullptr ||
                 (!qobject_cast<QAbstractButton *>(hitWidget) &&
                  !hitWidget->property("dragDisabled").toBool())) {
@@ -345,6 +356,102 @@ void Widget::onNavButtonClicked(QAbstractButton *button) {
     }
 
     switchToPage(m_buttonToRoute.value(button));
+}
+
+void Widget::updateThemeSwitchButton() {
+    if (m_themeSwitchBtn == nullptr) {
+        return;
+    }
+
+    const QString theme =
+        ConfigManager::instance().getConfig()["theme"].toString("light");
+    QColor iconColor = Config::Themes::getTheme(theme).textColor;
+    iconColor.setAlpha(100);
+
+    m_themeSwitchBtn->setIcon(
+        Utils::getColoredSvg(theme == "light" ? ":/icons/moon" : ":/icons/sun",
+                             iconColor));
+    m_themeSwitchBtn->setIconSize(QSize(32, 32));
+}
+
+void Widget::applyThemeToNavigation() {
+    const QString theme =
+        ConfigManager::instance().getConfig()["theme"].toString("light");
+    const QColor textColor = Config::Themes::getTheme(theme).textColor;
+
+    const QString normalColor = Utils::colorToRgba(textColor, 150);
+    const QString activeColor = Utils::colorToRgba(textColor, 255);
+    const QString separatorColor = Utils::colorToRgba(textColor, 200);
+    const QString btnHoverColor = Utils::colorToRgba(
+        Config::Themes::getReverseTheme(theme).backgroundColor, 100);
+
+    if (m_themeSwitchBtn != nullptr) {
+        m_themeSwitchBtn->setStyleSheet(
+            QString("QPushButton { background: transparent; border: none; "
+                    "border-radius: 3px; width: 40px; height: 40px; }"
+                    "QPushButton:hover { background: %1; }")
+                .arg(btnHoverColor));
+    }
+
+    const auto navButtons = m_navGroup->buttons();
+    for (auto *button : navButtons) {
+        button->setStyleSheet(QString("QPushButton {"
+                                      " background: transparent;"
+                                      " min-width: 77px;"
+                                      " border: none;"
+                                      " padding: 2px 0px;"
+                                      " text-align: center;"
+                                      " color: %1;"
+                                      " font-size: 24px;"
+                                      " font-weight: 900;"
+                                      "}"
+                                      "QPushButton:hover {"
+                                      " color: %2;"
+                                      "}"
+                                      "QPushButton:checked {"
+                                      " color: %2;"
+                                      " font-size: 26px;"
+                                      "}")
+                                  .arg(normalColor, activeColor));
+    }
+
+    const auto separators = ui->navBar->findChildren<QLabel *>();
+    for (auto *separator : separators) {
+        if (separator != nullptr && separator->text() == "|") {
+            separator->setStyleSheet(
+                QString("color: %1; padding: 0 2px; font-weight: 900;")
+                    .arg(separatorColor));
+        }
+    }
+
+    const auto navToolButtons =
+        ui->navBar->findChildren<QPushButton *>(QString(), Qt::FindDirectChildrenOnly);
+    for (auto *btn : navToolButtons) {
+        if (btn != nullptr && btn->property("navToolButton").toBool()) {
+            btn->setStyleSheet(
+                QString("QPushButton { background: transparent; border: none; "
+                        "border-radius: 3px; width: 40px; height: 40px; }"
+                        "QPushButton:hover { background: %1; }")
+                    .arg(btnHoverColor));
+        }
+    }
+}
+
+void Widget::applyTheme() {
+    updateThemeSwitchButton();
+    applyThemeToNavigation();
+
+    for (int i = 0; i < ui->stackPages->count(); ++i) {
+        QWidget *page = ui->stackPages->widget(i);
+        if (auto *todoPage = qobject_cast<TodoPage *>(page)) {
+            todoPage->applyTheme();
+        }
+        if (auto *donePage = qobject_cast<DonePage *>(page)) {
+            donePage->applyTheme();
+        }
+    }
+
+    update();
 }
 
 void Widget::paintEvent(QPaintEvent *event) {

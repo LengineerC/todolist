@@ -55,6 +55,33 @@ DonePage::DonePage(QWidget *parent)
 
 void DonePage::refreshData() { reloadData(); }
 
+void DonePage::applyTheme() {
+    const QString theme =
+        ConfigManager::instance().getConfig()["theme"].toString("light");
+    const QColor baseTextColor = Config::Themes::getTheme(theme).textColor;
+
+    m_clearAllButton->setIcon(Utils::getColoredSvg(
+        ":/icons/delete", QColor(baseTextColor.red(), baseTextColor.green(),
+                                  baseTextColor.blue(), 100)));
+
+    const QString hoverColor =
+        Utils::colorToRgba(Config::Themes::getReverseTheme(theme).backgroundColor,
+                           100);
+    m_clearAllButton->setStyleSheet(
+        QString("QPushButton {"
+                " background: transparent;"
+                " border-radius: 8px;"
+                "}"
+                "QPushButton:hover {"
+                " background: %1;"
+                " border-color: rgba(0, 0, 0, 130);"
+                "}")
+            .arg(hoverColor));
+
+    reloadData();
+    update();
+}
+
 void DonePage::setupUi() {
     auto *rootLayout = new QVBoxLayout(this);
     rootLayout->setContentsMargins(0, 0, 0, 0);
@@ -157,7 +184,7 @@ QWidget *DonePage::buildDoneItemRow(qint64 id, const QString &content) {
     auto *contentLabel = new ElidedLabel(row);
     contentLabel->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Fixed);
     contentLabel->setMinimumWidth(0);
-    contentLabel->setFixedHeight(28);
+    contentLabel->setFixedHeight(35);
     contentLabel->setWordWrap(false);
     contentLabel->setStyleSheet(QString("color: %1;").arg(textColor));
     contentLabel->setFullText(content);

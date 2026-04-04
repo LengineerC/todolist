@@ -13,6 +13,7 @@ class DonePage : public QWidget {
   public:
     explicit DonePage(QWidget *parent = nullptr);
     void refreshData();
+    void applyTheme();
 
   private:
     void setupUi();

@@ -19,6 +19,7 @@ class TodoItemWidget : public QWidget {
     int preferredItemHeight() const;
     bool isEditing() const;
     void beginInlineEdit();
+    void applyTheme();
 
   signals:
     void doubleClicked(TodoItemWidget *item);

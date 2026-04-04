@@ -31,54 +31,14 @@ TodoItemWidget::TodoItemWidget(const QString &text, QWidget *parent)
     m_label->setText(text);
     applyLabelStyle();
 
-    const QString theme =
-        ConfigManager::instance().getConfig()["theme"].toString();
-    const QString inputTextColor =
-        Utils::colorToRgba(Config::Themes::getTheme(theme).textColor, 255);
-    const QString inputBgColor =
-        Utils::colorToRgba(Config::Themes::getTheme(theme).backgroundColor, 40);
-    const QString inputBorderColor = Utils::colorToRgba(
-        Config::Themes::getReverseTheme(theme).backgroundColor, 90);
-
     m_editor->setText(text);
     m_editor->setVisible(false);
     m_editor->installEventFilter(this);
-    m_editor->setStyleSheet(
-        QString("QLineEdit {"
-                " color: %1;"
-                " background: %2;"
-                " border: 1px solid %3;"
-                " border-radius: 6px;"
-                " padding: 6px 10px;"
-                "}")
-            .arg(inputTextColor, inputBgColor, inputBorderColor));
 
-    QString btnBgColor = Utils::colorToRgba(
-        Config::Themes::getReverseTheme(
-            ConfigManager::instance().getConfig()["theme"].toString())
-            .backgroundColor,
-        100);
-    QColor baseTextColor =
-        Config::Themes::getTheme(
-            ConfigManager::instance().getConfig()["theme"].toString())
-            .textColor;
-    QColor iconColor = baseTextColor;
-    iconColor.setAlpha(100);
-    QIcon cancelIcon = Utils::getColoredSvg(":/icons/close", iconColor);
-    m_cancelButton->setIcon(cancelIcon);
     m_cancelButton->setVisible(false);
     m_cancelButton->setCursor(Qt::PointingHandCursor);
     m_cancelButton->setFocusPolicy(Qt::NoFocus);
     m_cancelButton->setFixedSize(22, 22);
-    m_cancelButton->setStyleSheet(QString("QPushButton {"
-                                          " background: transparent;"
-                                          " border-radius: 2px;"
-                                          " height: 100%;"
-                                          "}"
-                                          "QPushButton:hover {"
-                                          " background: %1;"
-                                          "}")
-                                      .arg(btnBgColor));
 
     layout->addWidget(m_label, 1);
     layout->addWidget(m_editor, 1);
@@ -106,6 +66,7 @@ TodoItemWidget::TodoItemWidget(const QString &text, QWidget *parent)
     });
 
     updateDynamicHeight();
+    applyTheme();
 }
 
 QString TodoItemWidget::text() const { return m_text; }
@@ -329,6 +290,44 @@ bool TodoItemWidget::forceWrapEnabled() const {
     const QString wrapMode =
         ConfigManager::instance().getConfig()["todoWrapMode"].toString("force");
     return wrapMode != "word";
+}
+
+void TodoItemWidget::applyTheme() {
+    const QString theme =
+        ConfigManager::instance().getConfig()["theme"].toString("light");
+    const QString inputTextColor =
+        Utils::colorToRgba(Config::Themes::getTheme(theme).textColor, 255);
+    const QString inputBgColor =
+        Utils::colorToRgba(Config::Themes::getTheme(theme).backgroundColor, 40);
+    const QString inputBorderColor = Utils::colorToRgba(
+        Config::Themes::getReverseTheme(theme).backgroundColor, 90);
+    m_editor->setStyleSheet(
+        QString("QLineEdit {"
+                " color: %1;"
+                " background: %2;"
+                " border: 1px solid %3;"
+                " border-radius: 6px;"
+                " padding: 6px 10px;"
+                "}")
+            .arg(inputTextColor, inputBgColor, inputBorderColor));
+
+    QColor iconColor = Config::Themes::getTheme(theme).textColor;
+    iconColor.setAlpha(100);
+    m_cancelButton->setIcon(Utils::getColoredSvg(":/icons/close", iconColor));
+
+    const QString btnBgColor = Utils::colorToRgba(
+        Config::Themes::getReverseTheme(theme).backgroundColor, 100);
+    m_cancelButton->setStyleSheet(QString("QPushButton {"
+                                          " background: transparent;"
+                                          " border-radius: 2px;"
+                                          " height: 100%;"
+                                          "}"
+                                          "QPushButton:hover {"
+                                          " background: %1;"
+                                          "}")
+                                      .arg(btnBgColor));
+
+    applyLabelStyle();
 }
 
 void TodoItemWidget::applyLabelStyle() {
