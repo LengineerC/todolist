@@ -11,17 +11,17 @@ A lightweight TodoList built with Qt6, featuring a countdown timer and theme swi
 - Double-click to mark a todo as completed
 - Long-press with the left mouse button to drag and reorder
 
-![todo.gif](./docs/images/todo%20(1080p).gif)
+![todo.gif](./docs/images/todo.gif)
 
 #### Done
 Completed items are sorted by completion time, and can be restored or deleted. The top button supports one-click deletion.
 
-![done.gif](./docs/images/done%20(1080p).gif)
+![done.gif](./docs/images/done.gif)
 
 #### Timer
 Countdown timer. You can click the digits to change the time. A reminder popup appears when the countdown ends.
 
-![timer.gif](./docs/images/timer%20(1080p).gif)
+![timer.gif](./docs/images/timer.gif)
 
 #### Other Features
 ##### Theme Switch
@@ -30,7 +30,7 @@ Click the button to switch between dark/light mode.
 ##### Window Lock
 Drag the top area of the window to move it. Resize from the window edges. After clicking the lock button, window position and size can no longer be changed, and mouse-click-through is enabled. Click again to unlock.
 
-![features.gif](./docs/images/features%20(1080p).gif);
+![features.gif](./docs/images/features.gif)
 
 ### Configuration
 #### `config.json`

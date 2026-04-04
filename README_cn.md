@@ -8,17 +8,17 @@
 - 双击完成该todo
 - 左键长按可拖动排序
 
-![todo.gif](./docs/images/todo%20(1080p).gif)
+![todo.gif](./docs/images/todo.gif)
 
 #### Done
 按完成时间排序已完成项，可恢复和删除。顶部按钮可以一键删除
 
-![done.gif](./docs/images/done%20(1080p).gif)
+![done.gif](./docs/images/done.gif)
 
 #### Timer
 倒计时，可点击数字修改时间。倒计时结束会出现弹窗提醒
 
-![timer.gif](./docs/images/timer%20(1080p).gif)
+![timer.gif](./docs/images/timer.gif)
 
 #### 其他功能
 ##### 主题切换
@@ -27,7 +27,7 @@
 ##### 窗口锁定
 点击窗口顶部拖动可以改变窗口位置。窗口四周可以改变窗口大小。点击按钮锁定之后窗口位置和大小不可以改变，窗口也会有鼠标穿透效果。再次点击按钮取消锁定
 
-![features.gif](./docs/images/features%20(1080p).gif);
+![features.gif](./docs/images/features.gif)
 
 ### 配置项
 #### `config.json`
