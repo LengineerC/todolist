@@ -5,6 +5,7 @@
 
 #include <QApplication>
 #include <QEvent>
+#include <QFont>
 #include <QFontMetrics>
 #include <QHBoxLayout>
 #include <QKeyEvent>
@@ -28,10 +29,14 @@ TodoItemWidget::TodoItemWidget(const QString &text, QWidget *parent)
     m_label->setTextInteractionFlags(Qt::NoTextInteraction);
     m_label->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
     m_label->setMinimumWidth(0);
+    QFont textFont = m_label->font();
+    textFont.setPixelSize(Config::contentTextFontPx);
+    m_label->setFont(textFont);
     m_label->setText(text);
     applyLabelStyle();
 
     m_editor->setText(text);
+    m_editor->setFont(textFont);
     m_editor->setVisible(false);
     m_editor->installEventFilter(this);
 
@@ -307,7 +312,6 @@ void TodoItemWidget::applyTheme() {
                 " background: %2;"
                 " border: 1px solid %3;"
                 " border-radius: 6px;"
-                " padding: 6px 10px;"
                 "}")
             .arg(inputTextColor, inputBgColor, inputBorderColor));
 

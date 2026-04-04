@@ -8,6 +8,8 @@ inline const int height = 600;
 
 inline const double lockOpacity = 0.5;
 
+inline const int contentTextFontPx = 24;
+
 struct Theme {
     QColor textColor;
     QColor backgroundColor;

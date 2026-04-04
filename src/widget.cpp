@@ -307,8 +307,10 @@ bool Widget::nativeEvent(const QByteArray &eventType, void *message,
         if (m_isLocked) {
             const QRect unlockRect =
                 lockButtonRectInWidget().adjusted(-8, -8, 8, 8);
-            if (unlockRect.contains(
-                    QPoint(static_cast<int>(x), static_cast<int>(y)))) {
+
+            const QPoint logicalPos = mapFromGlobal(QCursor::pos());
+
+            if (unlockRect.contains(logicalPos)) {
                 *result = HTCLIENT;
                 return true;
             }

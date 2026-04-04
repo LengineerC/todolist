@@ -5,6 +5,7 @@
 #include "utils.h"
 
 #include <QDateTime>
+#include <QFont>
 #include <QFrame>
 #include <QGraphicsOpacityEffect>
 #include <QHBoxLayout>
@@ -147,6 +148,9 @@ QWidget *DonePage::buildDateGroup(const QString &dateText) {
     auto *dateLabel = new QLabel(dateText, group);
     dateLabel->setFixedHeight(kDateTitleHeight);
     dateLabel->setAlignment(Qt::AlignVCenter | Qt::AlignLeft);
+    QFont dateFont = dateLabel->font();
+    dateFont.setPixelSize(Config::contentTextFontPx);
+    dateLabel->setFont(dateFont);
 
     const QString textColor = Utils::colorToRgba(
         Config::Themes::getTheme(
@@ -154,7 +158,7 @@ QWidget *DonePage::buildDateGroup(const QString &dateText) {
             .textColor,
         150);
     dateLabel->setStyleSheet(
-        QString("font-size: 20px; font-weight: bold; color: %1;").arg(textColor));
+        QString("font-weight: bold; color: %1;").arg(textColor));
 
     groupLayout->addWidget(dateLabel);
     return group;
@@ -186,6 +190,9 @@ QWidget *DonePage::buildDoneItemRow(qint64 id, const QString &content) {
     contentLabel->setMinimumWidth(0);
     contentLabel->setFixedHeight(35);
     contentLabel->setWordWrap(false);
+    QFont contentFont = contentLabel->font();
+    contentFont.setPixelSize(Config::contentTextFontPx);
+    contentLabel->setFont(contentFont);
     contentLabel->setStyleSheet(QString("color: %1;").arg(textColor));
     contentLabel->setFullText(content);
 

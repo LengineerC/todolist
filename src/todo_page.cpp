@@ -8,6 +8,7 @@
 
 #include <QApplication>
 #include <QEvent>
+#include <QFont>
 #include <QFontMetrics>
 #include <QGraphicsOpacityEffect>
 #include <QHBoxLayout>
@@ -102,6 +103,9 @@ TodoPage::TodoPage(QWidget *parent)
     m_dragProxy->setAttribute(Qt::WA_TransparentForMouseEvents);
     m_dragProxy->setAttribute(Qt::WA_StyledBackground, true);
     m_dragProxy->setAlignment(Qt::AlignTop | Qt::AlignLeft);
+    QFont dragProxyFont = m_dragProxy->font();
+    dragProxyFont.setPixelSize(Config::contentTextFontPx);
+    m_dragProxy->setFont(dragProxyFont);
     QString proxyBgColor = Utils::colorToRgba(
         Config::Themes::getTheme(
             ConfigManager::instance().getConfig()["theme"].toString())
@@ -158,6 +162,9 @@ TodoPage::TodoPage(QWidget *parent)
 
     m_addLineEdit = new QLineEdit(m_addEditorRow);
     m_addLineEdit->setPlaceholderText("New todo item");
+    QFont textFont = m_addLineEdit->font();
+    textFont.setPixelSize(Config::contentTextFontPx);
+    m_addLineEdit->setFont(textFont);
     m_addLineEdit->installEventFilter(this);
 
     const QString inputTextColor = Utils::colorToRgba(
