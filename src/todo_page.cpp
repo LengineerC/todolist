@@ -131,6 +131,7 @@ TodoPage::TodoPage(QWidget *parent)
                                    .arg(proxyBgColor, textColor, borderColor));
 
     m_addArea = new QPushButton(m_scrollContent);
+    m_addArea->setFocusPolicy(Qt::NoFocus);
     QColor iconColor = baseTextColor;
     iconColor.setAlpha(100);
     QIcon addIcon = Utils::getColoredSvg(":/icons/add", iconColor);
@@ -138,16 +139,17 @@ TodoPage::TodoPage(QWidget *parent)
     m_addArea->setCursor(Qt::PointingHandCursor);
     m_addArea->setFixedHeight(kItemMinHeight);
     m_addArea->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-    m_addArea->setStyleSheet(QString("QPushButton {"
-                                     " background: transparent;"
-                                    //  " border: 1px dashed rgba(0, 0, 0, 70);"
-                                     " border-radius: 8px;"
-                                     "}"
-                                     "QPushButton:hover {"
-                                     " background: %1;"
-                                     " border-color: rgba(0, 0, 0, 130);"
-                                     "}")
-                                 .arg(borderColor));
+    m_addArea->setStyleSheet(
+        QString("QPushButton {"
+                " background: transparent;"
+                //  " border: 1px dashed rgba(0, 0, 0, 70);"
+                " border-radius: 8px;"
+                "}"
+                "QPushButton:hover {"
+                " background: %1;"
+                " border-color: rgba(0, 0, 0, 130);"
+                "}")
+            .arg(borderColor));
 
     connect(m_addArea, &QPushButton::clicked, this,
             [this]() { beginAddInline(); });
@@ -183,18 +185,17 @@ TodoPage::TodoPage(QWidget *parent)
     //         .backgroundColor,
     //     100);
 
-    m_addLineEdit->setStyleSheet(
-        QString("QLineEdit {"
-                " color: %1;"
-                " height: 100%;"
-                " background: transparent;"
-                " border: none;"
-                // " background: %2;"
-                // " border: 1px solid %3;"
-                // " border-radius: 6px;"
-                // " padding: 6px 10px;"
-                "}")
-            .arg(inputTextColor));
+    m_addLineEdit->setStyleSheet(QString("QLineEdit {"
+                                         " color: %1;"
+                                         " height: 100%;"
+                                         " background: transparent;"
+                                         " border: none;"
+                                         // " background: %2;"
+                                         // " border: 1px solid %3;"
+                                         // " border-radius: 6px;"
+                                         // " padding: 6px 10px;"
+                                         "}")
+                                     .arg(inputTextColor));
 
     m_addCancelButton = new QPushButton(m_addEditorRow);
     QIcon cancelIcon = Utils::getColoredSvg(":/icons/close", iconColor);
@@ -202,16 +203,15 @@ TodoPage::TodoPage(QWidget *parent)
     m_addCancelButton->setCursor(Qt::PointingHandCursor);
     m_addCancelButton->setFocusPolicy(Qt::NoFocus);
     m_addCancelButton->setFixedSize(22, 22);
-    m_addCancelButton->setStyleSheet(
-        QString("QPushButton {"
-                " background: transparent;"
-                " border-radius: 2px;"
-                " height: 100%;"
-                "}"
-                "QPushButton:hover {"
-                " background: %1;"
-                "}")
-            .arg(borderColor));
+    m_addCancelButton->setStyleSheet(QString("QPushButton {"
+                                             " background: transparent;"
+                                             " border-radius: 2px;"
+                                             " height: 100%;"
+                                             "}"
+                                             "QPushButton:hover {"
+                                             " background: %1;"
+                                             "}")
+                                         .arg(borderColor));
 
     addEditorLayout->addWidget(m_addLineEdit, 1);
     addEditorLayout->addWidget(m_addCancelButton, 0, Qt::AlignCenter);
@@ -295,11 +295,11 @@ void TodoPage::applyTheme() {
     QColor iconColor = baseTextColor;
     iconColor.setAlpha(100);
     m_addArea->setIcon(Utils::getColoredSvg(":/icons/add", iconColor));
-    m_addCancelButton->setIcon(Utils::getColoredSvg(":/icons/close", iconColor));
+    m_addCancelButton->setIcon(
+        Utils::getColoredSvg(":/icons/close", iconColor));
 
-    const QString hoverColor =
-        Utils::colorToRgba(Config::Themes::getReverseTheme(theme).backgroundColor,
-                           100);
+    const QString hoverColor = Utils::colorToRgba(
+        Config::Themes::getReverseTheme(theme).backgroundColor, 100);
     m_addArea->setStyleSheet(QString("QPushButton {"
                                      " background: transparent;"
                                      " border-radius: 8px;"
@@ -309,42 +309,39 @@ void TodoPage::applyTheme() {
                                      " border-color: rgba(0, 0, 0, 130);"
                                      "}")
                                  .arg(hoverColor));
-    m_addCancelButton->setStyleSheet(
-        QString("QPushButton {"
-                " background: transparent;"
-                " border-radius: 2px;"
-                " height: 100%;"
-                "}"
-                "QPushButton:hover {"
-                " background: %1;"
-                "}")
-            .arg(hoverColor));
+    m_addCancelButton->setStyleSheet(QString("QPushButton {"
+                                             " background: transparent;"
+                                             " border-radius: 2px;"
+                                             " height: 100%;"
+                                             "}"
+                                             "QPushButton:hover {"
+                                             " background: %1;"
+                                             "}")
+                                         .arg(hoverColor));
 
     const QString inputTextColor =
         Utils::colorToRgba(Config::Themes::getTheme(theme).textColor, 255);
-    m_addLineEdit->setStyleSheet(
-        QString("QLineEdit {"
-                " color: %1;"
-                " height: 100%;"
-                " background: transparent;"
-                " border: none;"
-                "}")
-            .arg(inputTextColor));
+    m_addLineEdit->setStyleSheet(QString("QLineEdit {"
+                                         " color: %1;"
+                                         " height: 100%;"
+                                         " background: transparent;"
+                                         " border: none;"
+                                         "}")
+                                     .arg(inputTextColor));
 
     const QString proxyBgColor =
         Utils::colorToRgba(Config::Themes::getTheme(theme).backgroundColor, 20);
     const QString proxyTextColor =
         Utils::colorToRgba(Config::Themes::getTheme(theme).textColor, 150);
-    const QString proxyBorderColor =
-        Utils::colorToRgba(Config::Themes::getReverseTheme(theme).backgroundColor,
-                           100);
-    m_dragProxy->setStyleSheet(QString("background-color: %1;"
-                                       "border: 2px solid %3;"
-                                       "border-radius: 8px;"
-                                       "padding: 5px 12px;"
-                                       "color: %2;")
-                                   .arg(proxyBgColor, proxyTextColor,
-                                        proxyBorderColor));
+    const QString proxyBorderColor = Utils::colorToRgba(
+        Config::Themes::getReverseTheme(theme).backgroundColor, 100);
+    m_dragProxy->setStyleSheet(
+        QString("background-color: %1;"
+                "border: 2px solid %3;"
+                "border-radius: 8px;"
+                "padding: 5px 12px;"
+                "color: %2;")
+            .arg(proxyBgColor, proxyTextColor, proxyBorderColor));
 
     for (auto *item : m_items) {
         if (item != nullptr) {
@@ -354,7 +351,8 @@ void TodoPage::applyTheme() {
 
     if (m_placeholderItem != nullptr) {
         m_placeholderItem->applyTheme();
-        m_placeholderItem->setStyleSheet("background: transparent; border: none;");
+        m_placeholderItem->setStyleSheet(
+            "background: transparent; border: none;");
     }
 
     update();
@@ -420,7 +418,8 @@ void TodoPage::removeTodoItem(TodoItemWidget *item) {
         item->setGraphicsEffect(effect);
     }
 
-    auto *effect = qobject_cast<QGraphicsOpacityEffect *>(item->graphicsEffect());
+    auto *effect =
+        qobject_cast<QGraphicsOpacityEffect *>(item->graphicsEffect());
 
     auto *fadeAnim = new QPropertyAnimation(effect, "opacity", item);
     fadeAnim->setDuration(160);

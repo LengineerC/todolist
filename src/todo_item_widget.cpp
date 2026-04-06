@@ -20,6 +20,9 @@ TodoItemWidget::TodoItemWidget(const QString &text, QWidget *parent)
     : QWidget(parent), m_label(new QLabel(this)), m_editor(new QLineEdit(this)),
       m_cancelButton(new QPushButton(this)), m_pressing(false),
       m_longPressActive(false), m_editing(false), m_text(text) {
+
+    m_cancelButton->setFocusPolicy(Qt::NoFocus);
+
     auto *layout = new QHBoxLayout(this);
     layout->setContentsMargins(12, 10, 12, 10);
     layout->setSpacing(8);

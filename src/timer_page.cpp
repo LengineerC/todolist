@@ -24,6 +24,9 @@ TimerPage::TimerPage(QWidget *parent)
       m_resetButton(new QPushButton(this)), m_running(false),
       m_initialSeconds(kDefaultTimerSeconds),
       m_remainingSeconds(kDefaultTimerSeconds) {
+
+    m_startPauseButton->setFocusPolicy(Qt::NoFocus);
+    m_resetButton->setFocusPolicy(Qt::NoFocus);
     auto *root = new QVBoxLayout(this);
     root->setContentsMargins(0, 0, 0, 0);
     root->setSpacing(34);

@@ -97,6 +97,7 @@ void DonePage::setupUi() {
         100);
 
     m_clearAllButton = new QPushButton(this);
+    m_clearAllButton->setFocusPolicy(Qt::NoFocus);
     m_clearAllButton->setIconSize(QSize(28, 28));
     m_clearAllButton->setCursor(Qt::PointingHandCursor);
     m_clearAllButton->setFixedHeight(kTopRowHeight);
@@ -196,6 +197,7 @@ QWidget *DonePage::buildDoneItemRow(qint64 id, const QString &content) {
     contentLabel->setFullText(content);
 
     auto *restoreButton = new QPushButton(row);
+    restoreButton->setFocusPolicy(Qt::NoFocus);
     restoreButton->setCursor(Qt::PointingHandCursor);
     restoreButton->setFixedSize(kActionButtonSize, kActionButtonSize);
     restoreButton->setIcon(Utils::getColoredSvg(
@@ -212,6 +214,7 @@ QWidget *DonePage::buildDoneItemRow(qint64 id, const QString &content) {
                                      .arg(hoverColor));
 
     auto *deleteButton = new QPushButton(row);
+    deleteButton->setFocusPolicy(Qt::NoFocus);
     deleteButton->setCursor(Qt::PointingHandCursor);
     deleteButton->setFixedSize(kActionButtonSize, kActionButtonSize);
     deleteButton->setIcon(Utils::getColoredSvg(

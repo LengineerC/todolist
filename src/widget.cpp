@@ -76,13 +76,13 @@ Widget::Widget(QWidget *parent)
     const QJsonObject config = ConfigManager::instance().getConfig();
     int restoredWidth =
         qMax(baseWindowWidth(), config["windowWidth"].toInt(baseWindowWidth()));
-    int restoredHeight =
-        qMax(baseWindowHeight(),
-             config["windowHeight"].toInt(baseWindowHeight()));
+    int restoredHeight = qMax(baseWindowHeight(),
+                              config["windowHeight"].toInt(baseWindowHeight()));
 #if defined(Q_OS_MACOS) || defined(Q_OS_MAC)
     if (QScreen *activeScreen = screen(); activeScreen != nullptr) {
         const QRect available = activeScreen->availableGeometry();
-        const int maxWidth = qMax(baseWindowWidth(), available.width() * 85 / 100);
+        const int maxWidth =
+            qMax(baseWindowWidth(), available.width() * 85 / 100);
         const int maxHeight =
             qMax(baseWindowHeight(), available.height() * 85 / 100);
         restoredWidth = qMin(restoredWidth, maxWidth);
@@ -136,10 +136,12 @@ void Widget::setupRouter() {
 
     m_themeSwitchBtn = new QPushButton(ui->navBar);
     m_themeSwitchBtn->setFlat(true);
+    m_themeSwitchBtn->setFocusPolicy(Qt::NoFocus);
     ui->navLayout->addWidget(m_themeSwitchBtn);
 
     m_lockBtn = new QPushButton(ui->navBar);
     m_lockBtn->setFlat(true);
+    m_lockBtn->setFocusPolicy(Qt::NoFocus);
     m_lockBtn->setProperty("navToolButton", true);
     ui->navLayout->addWidget(m_lockBtn);
 
@@ -181,6 +183,7 @@ void Widget::registerPage(const QString &routeKey, const QString &title,
     auto *button = new QPushButton(title, this);
     button->setCheckable(true);
     button->setCursor(Qt::PointingHandCursor);
+    button->setFocusPolicy(Qt::NoFocus);
     button->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
 
     static QString heavyFamily;
